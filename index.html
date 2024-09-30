@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fourier Transform Tool</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+        button {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fourier Transform Tool</h1>
+    <button id="startRecording">録音開始</button>
+    <canvas id="inputStrengthCanvas" width="800" height="150"></canvas> <!-- 入力強度表示用 -->
+    <canvas id="frequencyCanvas" width="800" height="600"></canvas> <!-- 結果表示用 -->
+
+    <script>
+        const startButton = document.getElementById('startRecording');
+        const inputCanvas = document.getElementById('inputStrengthCanvas');
+        const inputCanvasContext = inputCanvas.getContext('2d');
+        const frequencyCanvas = document.getElementById('frequencyCanvas');
+        const frequencyCanvasContext = frequencyCanvas.getContext('2d');
+        let audioContext;
+        let analyser;
+        let microphone;
+        let frequencyData;
+        let mediaStream;
+        let isRecording = false;
+
+        // 音階とオクターブ
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octaves = [7, 6, 5, 4, 3, 2, 1, 0]; // 高音オクターブを左側に表示
+
+        // 各オクターブと音階の周波数と色
+        const frequencies = [];
+        octaves.forEach(octave => {
+            notes.forEach((note, index) => {
+                const frequency = 16.35 * Math.pow(2, octave + index / 12);
+                frequencies.push({ note: note + octave, frequency: frequency, color: getNoteColor(note) });
+            });
+        });
+
+        // 音階に対応する色
+        function getNoteColor(note) {
+            const colors = {
+                'C': '#E57373', 'C#': '#FF8A65', 'D': '#FFB74D', 'D#': '#FFD54F', 'E': '#FFF176',
+                'F': '#AED581', 'F#': '#81C784', 'G': '#4DD0E1', 'G#': '#4FC3F7', 'A': '#7986CB',
+                'A#': '#BA68C8', 'B': '#F06292'
+            };
+            return colors[note];
+        }
+
+        let recordingDuration = 5; // 録音時間（秒）
+        
+        startButton.addEventListener('click', function() {
+            if (isRecording) return;
+            isRecording = true;
+            startButton.disabled = true;
+            startButton.textContent = 'マイクにアクセス中...';
+
+            // マイクへのアクセスを試みる
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    console.log('マイクアクセス成功');
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+                    analyser.fftSize = 2048;
+
+                    frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                    mediaStream = stream;
+
+                    let remainingTime = recordingDuration;
+                    startButton.textContent = `録音中... 残り ${remainingTime} 秒`;
+
+                    const countdownInterval = setInterval(function() {
+                        remainingTime -= 1;
+                        if (remainingTime >= 0) {
+                            startButton.textContent = `録音中... 残り ${remainingTime} 秒`;
+                        }
+                    }, 1000);
+
+                    const inputStrengthInterval = setInterval(function() {
+                        analyser.getByteFrequencyData(frequencyData);
+                        drawInputStrength(frequencyData);
+                    }, 100);
+
+                    setTimeout(function() {
+                        clearInterval(inputStrengthInterval);
+                        clearInterval(countdownInterval);
+                        if (remainingTime < 0) {
+                            remainingTime = 0;
+                        }
+                        startButton.textContent = `録音完了`;
+                        analyser.getByteFrequencyData(frequencyData);
+                        const strengths = calculateNoteStrengths(frequencyData);
+                        drawNoteStrengths(strengths);
+                        stopRecording();
+                    }, recordingDuration * 1000);
+                })
+                .catch(function(err) {
+                    console.error("マイクのアクセスに失敗しました: " + err);
+                    isRecording = false;
+                    startButton.disabled = false;
+                    startButton.textContent = "録音開始";
+                });
+        });
+
+        function stopRecording() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            isRecording = false;
+            startButton.disabled = false;
+            startButton.textContent = "録音開始";
+        }
+
+        // 音声入力の強度をリアルタイムで波形として可視化
+        function drawInputStrength(frequencyData) {
+            inputCanvasContext.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
+            const barWidth = (inputCanvas.width / frequencyData.length) * 2.5;
+            let x = 0;
+            for (let i = 0; i < frequencyData.length; i++) {
+                const barHeight = frequencyData[i] / 2; // 強度に応じて高さを設定
+                inputCanvasContext.fillStyle = 'rgb(0, 102, 204)';
+                inputCanvasContext.fillRect(x, inputCanvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+
+        // 各音階の強度を計算
+        function calculateNoteStrengths(frequencyData) {
+            const sampleRate = audioContext.sampleRate;
+            const strengths = frequencies.map(f => {
+                const targetFrequency = f.frequency;
+                const index = Math.round(targetFrequency / (sampleRate / analyser.fftSize));
+                return {
+                    note: f.note,
+                    strength: frequencyData[index] || 0,
+                    color: f.color
+                };
+            });
+            return strengths;
+        }
+
+        // 音階の強度をグラフで表示（12行×8列に並べる）
+        function drawNoteStrengths(strengths) {
+            const rows = 12; // 12音階
+            const cols = 8; // 8オクターブ
+
+            const barWidth = frequencyCanvas.width / cols; // 1列あたりの幅
+            const barHeightUnit = frequencyCanvas.height / rows / 255; // 各音階の最大強度を255としてスケールを設定
+
+            // 12行x8列で棒グラフを描画（左から高音のオクターブ、右に向かって低音）
+            for (let col = 0; col < cols; col++) {
+                for (let row = 0; row < rows; row++) {
+                    const i = col * rows + row; // 音階のインデックス
+                    const strength = strengths[i];
+                    const x = col * barWidth;
+                    const y = (rows - row) * (frequencyCanvas.height / rows); // Y位置を下から上に
+
+                    // 棒グラフを色分けして描画
+                    frequencyCanvasContext.fillStyle = strength.color;
+                    frequencyCanvasContext.fillRect(
+                        x, 
+                        y - strength.strength * barHeightUnit,  // 棒の高さを上に伸ばす
+                        barWidth - 2, 
+                        strength.strength * barHeightUnit       // 棒の長さ
+                    );
+
+                    // 音階名を表示
+                    frequencyCanvasContext.fillStyle = 'black';
+                    frequencyCanvasContext.fillText(strength.note, x + barWidth / 4, y - 5);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
