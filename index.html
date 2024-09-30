@@ -2,6 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <!-- ビューポートのメタタグを追加 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fourier Tone Analyzer</title>
     <style>
         body {
@@ -14,8 +16,6 @@
         canvas {
             border: 1px solid black;
             margin-bottom: 20px;
-            margin-left: 10px;
-            margin-right: 10px;
         }
         button {
             margin-bottom: 20px;
@@ -26,13 +26,22 @@
             margin-bottom: 20px;
             font-size: 24px;
         }
+        /* キャンバスの幅と高さを固定ピクセル値で指定 */
+        #inputStrengthCanvas {
+            width: 300px;
+            height: 150px;
+        }
+        #frequencyCanvas {
+            width: 350px;
+            height: 450px;
+        }
     </style>
 </head>
 <body>
     <h1>Fourier Tone Analyzer</h1>
     <button id="startRecording">録音開始</button>
-    <canvas id="inputStrengthCanvas" width="300" height="100"></canvas>
-    <canvas id="frequencyCanvas" width="350" height="450"></canvas>
+    <canvas id="inputStrengthCanvas"></canvas>
+    <canvas id="frequencyCanvas"></canvas>
 
     <script>
         const startButton = document.getElementById('startRecording');
@@ -43,12 +52,11 @@
 
         // キャンバスのサイズを設定
         function resizeCanvases() {
-            inputCanvas.width = inputCanvas.clientWidth;
-            inputCanvas.height = inputCanvas.clientHeight;
-            frequencyCanvas.width = frequencyCanvas.clientWidth;
-            frequencyCanvas.height = frequencyCanvas.clientHeight;
+            inputCanvas.width = 300;
+            inputCanvas.height = 150;
+            frequencyCanvas.width = 350;
+            frequencyCanvas.height = 450;
         }
-        window.addEventListener('resize', resizeCanvases);
         resizeCanvases();
 
         let audioContext;
@@ -183,7 +191,7 @@
         function calculateNoteStrengths(frequencyData) {
             const sampleRate = audioContext.sampleRate;
             const nyquist = sampleRate / 2;
-            const binSize = nyquist / analyser.frequencyBinCount;
+            const binSize = nyquist / frequencyData.length;
             const strengths = frequencies.map(f => {
                 const targetFrequency = f.frequency;
                 const index = Math.round(targetFrequency / binSize);
