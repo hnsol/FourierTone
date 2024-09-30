@@ -5,19 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fourier Transform Tool</title>
     <style>
+        body {
+            display: flex;
+            flex-direction: column; /* 縦に要素を並べる */
+            align-items: center;    /* 中央寄せ */
+            margin: 0;
+            padding: 0;
+        }
+
         canvas {
             border: 1px solid black;
+            margin-bottom: 20px; /* 各要素の間に余白を追加 */
         }
+
         button {
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* ボタンの下に余白を追加 */
+        }
+
+        h1 {
+            margin-bottom: 20px; /* タイトルとボタンの間に余白を追加 */
         }
     </style>
 </head>
 <body>
     <h1>Fourier Transform Tool</h1>
     <button id="startRecording">録音開始</button>
-    <canvas id="inputStrengthCanvas" width="800" height="150"></canvas> <!-- 入力強度表示用 -->
-    <canvas id="frequencyCanvas" width="800" height="600"></canvas> <!-- 結果表示用 -->
+    <canvas id="inputStrengthCanvas" width="300" height="100"></canvas> <!-- 入力強度表示用 -->
+    <canvas id="frequencyCanvas" width="400" height="300"></canvas> <!-- 結果表示用 -->
 
     <script>
         const startButton = document.getElementById('startRecording');
