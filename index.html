@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fourier Tone Analyzer</title>
     <style>
         body {
@@ -12,28 +11,34 @@
             margin: 0;
             padding: 0;
         }
-
         canvas {
             border: 1px solid black;
             margin-bottom: 20px;
-            margin-left: 10px;
-            margin-right: 10px;
         }
-
         button {
             margin-bottom: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
         }
-
         h1 {
-            margin-bottom: 20px;
+            margin: 20px;
+            font-size: 24px;
+        }
+        #inputStrengthCanvas {
+            width: 300px;
+            height: 150px;
+        }
+        #frequencyCanvas {
+            width: 350px;
+            height: 500px;
         }
     </style>
 </head>
 <body>
     <h1>Fourier Tone Analyzer</h1>
     <button id="startRecording">録音開始</button>
-    <canvas id="inputStrengthCanvas" width="300" height="100"></canvas> <!-- 入力強度表示用 -->
-    <canvas id="frequencyCanvas" width="350" height="450"></canvas> <!-- 結果表示用 -->
+    <canvas id="inputStrengthCanvas"></canvas>
+    <canvas id="frequencyCanvas"></canvas>
 
     <script>
         const startButton = document.getElementById('startRecording');
@@ -41,16 +46,28 @@
         const inputCanvasContext = inputCanvas.getContext('2d');
         const frequencyCanvas = document.getElementById('frequencyCanvas');
         const frequencyCanvasContext = frequencyCanvas.getContext('2d');
+
+        // キャンバスのサイズを設定
+        function resizeCanvases() {
+            inputCanvas.width = inputCanvas.clientWidth;
+            inputCanvas.height = inputCanvas.clientHeight;
+            frequencyCanvas.width = frequencyCanvas.clientWidth;
+            frequencyCanvas.height = frequencyCanvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
         let audioContext;
         let analyser;
         let microphone;
         let frequencyData;
+        let timeDomainData;
         let mediaStream;
         let isRecording = false;
 
         // 音階とオクターブ
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        const octaves = [7, 6, 5, 4, 3, 2, 1, 0]; // 高音オクターブを左側に表示
+        const octaves = [7, 6, 5, 4, 3, 2, 1, 0]; // 高音から低音へ（高いオクターブが左）
 
         // 各オクターブと音階の周波数と色
         const frequencies = [];
@@ -64,32 +81,31 @@
         // 音階に対応する色
         function getNoteColor(note) {
             const colors = {
-                'C': '#E57373', 'C#': '#FF8A65', 'D': '#FFB74D', 'D#': '#FFD54F', 'E': '#FFF176',
-                'F': '#AED581', 'F#': '#81C784', 'G': '#4DD0E1', 'G#': '#4FC3F7', 'A': '#7986CB',
+                'C': '#E57373',  'C#': '#FF8A65', 'D': '#FFB74D', 'D#': '#FFD54F', 'E': '#FFF176',
+                'F': '#AED581',  'F#': '#81C784', 'G': '#4DD0E1', 'G#': '#4FC3F7', 'A': '#7986CB',
                 'A#': '#BA68C8', 'B': '#F06292'
             };
             return colors[note];
         }
 
         let recordingDuration = 5; // 録音時間（秒）
-        
+
         startButton.addEventListener('click', function() {
             if (isRecording) return;
             isRecording = true;
             startButton.disabled = true;
             startButton.textContent = 'マイクにアクセス中...';
 
-            // マイクへのアクセスを試みる
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(function(stream) {
-                    console.log('マイクアクセス成功');
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 2048;
                     microphone = audioContext.createMediaStreamSource(stream);
                     microphone.connect(analyser);
-                    analyser.fftSize = 2048;
 
-                    frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                    frequencyData = new Float32Array(analyser.frequencyBinCount);
+                    timeDomainData = new Uint8Array(analyser.fftSize);
                     mediaStream = stream;
 
                     let remainingTime = recordingDuration;
@@ -102,19 +118,17 @@
                         }
                     }, 1000);
 
+                    // 入力波形をリアルタイムで表示
                     const inputStrengthInterval = setInterval(function() {
-                        analyser.getByteFrequencyData(frequencyData);
-                        drawInputStrength(frequencyData);
-                    }, 100);
+                        analyser.getByteTimeDomainData(timeDomainData);
+                        drawInputStrength(timeDomainData);
+                    }, 30);
 
                     setTimeout(function() {
                         clearInterval(inputStrengthInterval);
                         clearInterval(countdownInterval);
-                        if (remainingTime < 0) {
-                            remainingTime = 0;
-                        }
                         startButton.textContent = `録音完了`;
-                        analyser.getByteFrequencyData(frequencyData);
+                        analyser.getFloatFrequencyData(frequencyData);
                         const strengths = calculateNoteStrengths(frequencyData);
                         drawNoteStrengths(strengths);
                         stopRecording();
@@ -137,69 +151,96 @@
             startButton.textContent = "録音開始";
         }
 
-        // 音声入力の強度をリアルタイムで波形として可視化
-        function drawInputStrength(frequencyData) {
+        // 音声入力の波形をリアルタイムで表示
+        function drawInputStrength(timeDomainData) {
             inputCanvasContext.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
-            const barWidth = (inputCanvas.width / frequencyData.length) * 2.5;
+            inputCanvasContext.lineWidth = 2;
+            inputCanvasContext.strokeStyle = 'rgb(0, 102, 204)';
+            inputCanvasContext.beginPath();
+
+            const sliceWidth = inputCanvas.width / timeDomainData.length;
             let x = 0;
-            for (let i = 0; i < frequencyData.length; i++) {
-                const barHeight = frequencyData[i] / 2; // 強度に応じて高さを設定
-                inputCanvasContext.fillStyle = 'rgb(0, 102, 204)';
-                inputCanvasContext.fillRect(x, inputCanvas.height - barHeight, barWidth, barHeight);
-                x += barWidth + 1;
+
+            for (let i = 0; i < timeDomainData.length; i++) {
+                const v = timeDomainData[i] / 128.0;
+                const y = v * inputCanvas.height / 2;
+
+                if (i === 0) {
+                    inputCanvasContext.moveTo(x, y);
+                } else {
+                    inputCanvasContext.lineTo(x, y);
+                }
+
+                x += sliceWidth;
             }
+
+            inputCanvasContext.lineTo(inputCanvas.width, inputCanvas.height / 2);
+            inputCanvasContext.stroke();
         }
 
         // 各音階の強度を計算
         function calculateNoteStrengths(frequencyData) {
             const sampleRate = audioContext.sampleRate;
+            const nyquist = sampleRate / 2;
+            const binSize = nyquist / analyser.frequencyBinCount;
             const strengths = frequencies.map(f => {
                 const targetFrequency = f.frequency;
-                const index = Math.round(targetFrequency / (sampleRate / analyser.fftSize));
+                const index = Math.round(targetFrequency / binSize);
+                const decibel = frequencyData[index] || -Infinity;
                 return {
                     note: f.note,
-                    strength: frequencyData[index] || 0,
+                    strength: decibel,
                     color: f.color
                 };
             });
             return strengths;
         }
 
-        // 音階の強度をグラフで表示（12行×8列に並べる）
+        // 音階の強度をグラフで表示
         function drawNoteStrengths(strengths) {
-            const rows = 12; // 12音階
-            const cols = 8; // 8オクターブ
+            const rows = 12;
+            const cols = 8;
 
-            const barWidth = (frequencyCanvas.width - 40) / cols; // 1列あたりの幅、余白を確保
-            const barHeightUnit = (frequencyCanvas.height - 40) / rows / 255; // 各音階の最大強度を255としてスケールを設定
+            const barWidth = (frequencyCanvas.width - 60) / cols;
+            const barHeightUnit = (frequencyCanvas.height - 40) / rows;
+
+            // キャンバスをクリア
+            frequencyCanvasContext.clearRect(0, 0, frequencyCanvas.width, frequencyCanvas.height);
 
             // 縦軸（音階ラベル）を描画
             for (let row = 0; row < rows; row++) {
                 frequencyCanvasContext.fillStyle = 'black';
-                frequencyCanvasContext.fillText(notes[11 - row], 5, (row + 1) * ((frequencyCanvas.height - 40) / rows) - 5); // ラベル位置調整
+                frequencyCanvasContext.fillText(notes[rows - row -1], 10, (row + 0.5) * barHeightUnit);
             }
 
-            // 横軸（オクターブラベル）を描画
+            // 横軸（オクターブラベル）を描画（高いオクターブが左）
             for (let col = 0; col < cols; col++) {
                 frequencyCanvasContext.fillStyle = 'black';
-                frequencyCanvasContext.fillText('O' + (7 - col), col * barWidth + 60, frequencyCanvas.height - 10);
+                frequencyCanvasContext.fillText('O' + octaves[col], col * barWidth + 50, frequencyCanvas.height - 10);
             }
 
-            // 12行x8列で棒グラフを描画（左から高音のオクターブ、右に向かって低音）
+            const minDb = -100;
+            const maxDb = -30;
+
+            // 棒グラフを描画
             for (let col = 0; col < cols; col++) {
                 for (let row = 0; row < rows; row++) {
-                    const i = col * rows + row; // 音階のインデックス
+                    const i = col * rows + row;
                     const strength = strengths[i];
-                    const x = col * barWidth + 40; // 横方向に少し余白を追加
-                    const y = (rows - row) * ((frequencyCanvas.height - 40) / rows); // Y位置を調整
+                    const x = col * barWidth + 40;
+                    const y = row * barHeightUnit + 20;
 
-                    // 棒グラフを色分けして描画
+                    const normalizedStrength = (strength.strength - minDb) / (maxDb - minDb);
+                    const clampedStrength = Math.max(0, Math.min(1, normalizedStrength));
+
+                    const height = clampedStrength * barHeightUnit;
+
                     frequencyCanvasContext.fillStyle = strength.color;
                     frequencyCanvasContext.fillRect(
-                        x, 
-                        y - strength.strength * barHeightUnit,  // 棒の高さを上に伸ばす
-                        barWidth - 2, 
-                        strength.strength * barHeightUnit       // 棒の長さ
+                        x,
+                        y + (barHeightUnit - height),
+                        barWidth - 2,
+                        height
                     );
                 }
             }
