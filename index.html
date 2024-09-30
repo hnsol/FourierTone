@@ -14,6 +14,8 @@
         canvas {
             border: 1px solid black;
             margin-bottom: 20px;
+            margin-left: 10px;
+            margin-right: 10px;
         }
         button {
             margin-bottom: 20px;
@@ -21,24 +23,16 @@
             font-size: 16px;
         }
         h1 {
-            margin: 20px;
+            margin-bottom: 20px;
             font-size: 24px;
-        }
-        #inputStrengthCanvas {
-            width: 300px;
-            height: 150px;
-        }
-        #frequencyCanvas {
-            width: 350px;
-            height: 500px;
         }
     </style>
 </head>
 <body>
     <h1>Fourier Tone Analyzer</h1>
     <button id="startRecording">録音開始</button>
-    <canvas id="inputStrengthCanvas"></canvas>
-    <canvas id="frequencyCanvas"></canvas>
+    <canvas id="inputStrengthCanvas" width="300" height="100"></canvas>
+    <canvas id="frequencyCanvas" width="350" height="450"></canvas>
 
     <script>
         const startButton = document.getElementById('startRecording');
@@ -66,27 +60,34 @@
         let isRecording = false;
 
         // 音階とオクターブ
-        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        const octaves = [7, 6, 5, 4, 3, 2, 1, 0]; // 高音から低音へ（高いオクターブが左）
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // Cが低い音、Bが高い音
+        const octaves = [7, 6, 5, 4, 3, 2, 1, 0]; // 高いオクターブが左
+
+        // 音階に対応する色
+        const noteColors = {
+            'C': '#E57373',    // レッド
+            'C#': '#FF8A65',   // コーラル
+            'D': '#FFB74D',    // オレンジ
+            'D#': '#FFD54F',   // ゴールド
+            'E': '#FFF176',    // イエロー
+            'F': '#AED581',    // ライムグリーン
+            'F#': '#81C784',   // グリーン
+            'G': '#4DD0E1',    // アクア
+            'G#': '#4FC3F7',   // ブルー
+            'A': '#7986CB',    // ネイビー
+            'A#': '#BA68C8',   // バイオレット
+            'B': '#F06292'     // マゼンタ
+        };
 
         // 各オクターブと音階の周波数と色
         const frequencies = [];
         octaves.forEach(octave => {
-            notes.forEach((note, index) => {
-                const frequency = 16.35 * Math.pow(2, octave + index / 12);
-                frequencies.push({ note: note + octave, frequency: frequency, color: getNoteColor(note) });
+            notes.forEach((note) => {
+                const frequency = 16.35 * Math.pow(2, octave + notes.indexOf(note) / 12);
+                const color = noteColors[note]; // 音階名のみで色を取得
+                frequencies.push({ note: note + octave, frequency: frequency, color: color });
             });
         });
-
-        // 音階に対応する色
-        function getNoteColor(note) {
-            const colors = {
-                'C': '#E57373',  'C#': '#FF8A65', 'D': '#FFB74D', 'D#': '#FFD54F', 'E': '#FFF176',
-                'F': '#AED581',  'F#': '#81C784', 'G': '#4DD0E1', 'G#': '#4FC3F7', 'A': '#7986CB',
-                'A#': '#BA68C8', 'B': '#F06292'
-            };
-            return colors[note];
-        }
 
         let recordingDuration = 5; // 録音時間（秒）
 
@@ -198,8 +199,8 @@
 
         // 音階の強度をグラフで表示
         function drawNoteStrengths(strengths) {
-            const rows = 12;
-            const cols = 8;
+            const rows = 12; // 12音階
+            const cols = 8;  // 8オクターブ
 
             const barWidth = (frequencyCanvas.width - 60) / cols;
             const barHeightUnit = (frequencyCanvas.height - 40) / rows;
@@ -207,16 +208,29 @@
             // キャンバスをクリア
             frequencyCanvasContext.clearRect(0, 0, frequencyCanvas.width, frequencyCanvas.height);
 
-            // 縦軸（音階ラベル）を描画
+            // フォント設定
+            frequencyCanvasContext.font = '14px Arial';
+            frequencyCanvasContext.textBaseline = 'middle';
+
+            // 縦軸（音階ラベル）を描画（上が高い音）
             for (let row = 0; row < rows; row++) {
                 frequencyCanvasContext.fillStyle = 'black';
-                frequencyCanvasContext.fillText(notes[rows - row -1], 10, (row + 0.5) * barHeightUnit);
+                frequencyCanvasContext.fillText(
+                    notes[11 - row],
+                    10,
+                    row * barHeightUnit + barHeightUnit / 2 + 20
+                );
             }
 
-            // 横軸（オクターブラベル）を描画（高いオクターブが左）
+            // 横軸（オクターブラベル）を描画（左が高いオクターブ）
             for (let col = 0; col < cols; col++) {
                 frequencyCanvasContext.fillStyle = 'black';
-                frequencyCanvasContext.fillText('O' + octaves[col], col * barWidth + 50, frequencyCanvas.height - 10);
+                frequencyCanvasContext.textAlign = 'center';
+                frequencyCanvasContext.fillText(
+                    'O' + octaves[col],
+                    col * barWidth + barWidth / 2 + 40,
+                    frequencyCanvas.height - 10
+                );
             }
 
             const minDb = -100;
@@ -225,7 +239,7 @@
             // 棒グラフを描画
             for (let col = 0; col < cols; col++) {
                 for (let row = 0; row < rows; row++) {
-                    const i = col * rows + row;
+                    const i = col * rows + (rows - 1 - row); // インデックス修正
                     const strength = strengths[i];
                     const x = col * barWidth + 40;
                     const y = row * barHeightUnit + 20;
