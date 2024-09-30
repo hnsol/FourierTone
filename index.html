@@ -3,35 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fourier Transform Tool</title>
+    <title>Fourier Tone Analyzer</title>
     <style>
         body {
             display: flex;
-            flex-direction: column; /* 縦に要素を並べる */
-            align-items: center;    /* 中央寄せ */
+            flex-direction: column;
+            align-items: center;
             margin: 0;
             padding: 0;
         }
 
         canvas {
             border: 1px solid black;
-            margin-bottom: 20px; /* 各要素の間に余白を追加 */
+            margin-bottom: 20px;
+            margin-left: 10px;
+            margin-right: 10px;
         }
 
         button {
-            margin-bottom: 20px; /* ボタンの下に余白を追加 */
+            margin-bottom: 20px;
         }
 
         h1 {
-            margin-bottom: 20px; /* タイトルとボタンの間に余白を追加 */
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Fourier Transform Tool</h1>
+    <h1>Fourier Tone Analyzer</h1>
     <button id="startRecording">録音開始</button>
     <canvas id="inputStrengthCanvas" width="300" height="100"></canvas> <!-- 入力強度表示用 -->
-    <canvas id="frequencyCanvas" width="400" height="300"></canvas> <!-- 結果表示用 -->
+    <canvas id="frequencyCanvas" width="350" height="450"></canvas> <!-- 結果表示用 -->
 
     <script>
         const startButton = document.getElementById('startRecording');
@@ -168,16 +170,28 @@
             const rows = 12; // 12音階
             const cols = 8; // 8オクターブ
 
-            const barWidth = frequencyCanvas.width / cols; // 1列あたりの幅
-            const barHeightUnit = frequencyCanvas.height / rows / 255; // 各音階の最大強度を255としてスケールを設定
+            const barWidth = (frequencyCanvas.width - 40) / cols; // 1列あたりの幅、余白を確保
+            const barHeightUnit = (frequencyCanvas.height - 40) / rows / 255; // 各音階の最大強度を255としてスケールを設定
+
+            // 縦軸（音階ラベル）を描画
+            for (let row = 0; row < rows; row++) {
+                frequencyCanvasContext.fillStyle = 'black';
+                frequencyCanvasContext.fillText(notes[11 - row], 5, (row + 1) * ((frequencyCanvas.height - 40) / rows) - 5); // ラベル位置調整
+            }
+
+            // 横軸（オクターブラベル）を描画
+            for (let col = 0; col < cols; col++) {
+                frequencyCanvasContext.fillStyle = 'black';
+                frequencyCanvasContext.fillText('O' + (7 - col), col * barWidth + 60, frequencyCanvas.height - 10);
+            }
 
             // 12行x8列で棒グラフを描画（左から高音のオクターブ、右に向かって低音）
             for (let col = 0; col < cols; col++) {
                 for (let row = 0; row < rows; row++) {
                     const i = col * rows + row; // 音階のインデックス
                     const strength = strengths[i];
-                    const x = col * barWidth;
-                    const y = (rows - row) * (frequencyCanvas.height / rows); // Y位置を下から上に
+                    const x = col * barWidth + 40; // 横方向に少し余白を追加
+                    const y = (rows - row) * ((frequencyCanvas.height - 40) / rows); // Y位置を調整
 
                     // 棒グラフを色分けして描画
                     frequencyCanvasContext.fillStyle = strength.color;
@@ -187,10 +201,6 @@
                         barWidth - 2, 
                         strength.strength * barHeightUnit       // 棒の長さ
                     );
-
-                    // 音階名を表示
-                    frequencyCanvasContext.fillStyle = 'black';
-                    frequencyCanvasContext.fillText(strength.note, x + barWidth / 4, y - 5);
                 }
             }
         }
