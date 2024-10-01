@@ -13,11 +13,19 @@
     <canvas id="inputStrengthCanvas"></canvas>
     <canvas id="frequencyCanvas"></canvas>
     <div id="recordingEndTime"></div>
-    <button id="buttonA">A</button>
-    <button id="buttonB">B</button>
-    <button id="buttonC">C</button>
-    <button id="buttonD">D</button>
-    <button id="buttonE">E</button>
+
+    <!-- ボタンを囲むコンテナを追加 -->
+    <div class="button-container">
+        <button id="buttonA">A</button>
+        <button id="buttonB">B</button>
+        <button id="buttonC">C</button>
+        <button id="buttonD">D</button>
+        <button id="buttonE">E</button>
+    </div>
+
+    <!-- minDbとmaxDbの表示用の要素を追加 -->
+    <div id="dbValues">minDb: -, maxDb: -</div>
+    
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,3 +1,18 @@
+/* minDbとmaxDbの表示用スタイル */
+#dbValues {
+    font-size: 16px;
+    margin-top: 10px;
+    color: #595959;
+}
+
+/* ボタンを横一列に並べる */
+.button-container {
+    display: flex;
+    gap: 10px; /* ボタン間のスペース */
+    margin-bottom: 20px; /* 下にスペース */
+}
+
+/* 既存のスタイル */
 body {
     font-family: 'Noto Sans JP', sans-serif;
     color: #595959;
@@ -14,7 +29,6 @@ canvas {
 }
 
 button {
-    margin-bottom: 20px;
     padding: 10px 20px;
     font-size: 16px;
 }

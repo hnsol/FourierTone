@@ -6,22 +6,25 @@ class FourierToneAnalyzer {
         this.frequencyCanvas = document.getElementById('frequencyCanvas');
         this.frequencyCanvasContext = this.frequencyCanvas.getContext('2d');
         this.recordingEndTimeDiv = document.getElementById('recordingEndTime');
+        this.dbValuesDiv = document.getElementById('dbValues'); // minDbとmaxDbを表示する要素
 
-        this.minDb = -150;
-        this.maxDb = -30;
+        this.buttonConfigurations = [
+            { minDb: -100, maxDb: -35 },
+            { minDb: -110, maxDb: -40 },
+            { minDb: -120, maxDb: -45 },
+            { minDb: -130, maxDb: -50 },
+            { minDb: -140, maxDb: -55 }
+        ];
+
+        // 初期化: 最初のボタンのminDbとmaxDbを設定
+        this.minDb = this.buttonConfigurations[0].minDb;
+        this.maxDb = this.buttonConfigurations[0].maxDb;
 
         this.octaveDisplayFlags = {
-            'O0': true,  'O1': true, 'O2': false, 'O3': false, 'O4': false,
-            'O5': false, 'O6': true, 'O7': true,  'O8': true, 'O9': true, 
+            'O0': true,  'O1': true,  'O2': false, 'O3': false, 'O4': false,
+            'O5': false, 'O6': false, 'O7': true, 'O8': true,  'O9': true, 
             'OALL': false
         }; // 各オクターブの表示フラグをディクショナリ形式で設定
-        this.buttonConfigurations = [
-            { minDb: -150, maxDb: -30 },
-            { minDb: -150, maxDb: -50 },
-            { minDb: -100, maxDb: -30 },
-            { minDb: -100, maxDb: -50 },
-            { minDb: -100, maxDb: -80 }
-        ];
 
         this.notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         this.octaves = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -47,8 +50,27 @@ class FourierToneAnalyzer {
             });
         }
 
+        // 最初にminDbとmaxDbを表示
+        this.updateDbDisplay();
+
         this.resizeCanvases();
         this.drawAxisLabels();
+    }
+
+    setDbRange(index) {
+        const config = this.buttonConfigurations[index];
+        this.minDb = config.minDb;
+        this.maxDb = config.maxDb;
+
+        // minDbとmaxDbを表示する
+        this.updateDbDisplay();
+
+        this.drawNoteStrengths(this.calculateNoteStrengths());
+    }
+
+    updateDbDisplay() {
+        // minDbとmaxDbを表示する
+        this.dbValuesDiv.textContent = `minDb: ${this.minDb}, maxDb: ${this.maxDb}`;
     }
 
     resizeCanvases() {
@@ -114,14 +136,6 @@ class FourierToneAnalyzer {
                 colIndex++; // 左詰めで次のオクターブに進む
             }
         }
-    }
-
-
-    setDbRange(index) {
-        const config = this.buttonConfigurations[index];
-        this.minDb = config.minDb;
-        this.maxDb = config.maxDb;
-        this.drawNoteStrengths(this.calculateNoteStrengths());
     }
 
     startRecording() {
