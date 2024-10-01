@@ -28,8 +28,8 @@
         }
         /* キャンバスの幅と高さを固定ピクセル値で指定 */
         #inputStrengthCanvas {
-            width: 300px;
-            height: 100px;
+            width: 350px;
+            height: 50px;
         }
         #frequencyCanvas {
             width: 350px;
@@ -101,7 +101,7 @@
             });
         });
 
-        let recordingDuration = 5; // 録音時間（秒）
+        let recordingDuration = 3; // 録音時間（秒）
 
         startButton.addEventListener('click', function() {
             if (isRecording) return;
@@ -241,7 +241,7 @@
 
             // 縦軸（音階ラベル）を描画（上が高い音）
             for (let row = 0; row < rows; row++) {
-                frequencyCanvasContext.fillStyle = 'black';
+                frequencyCanvasContext.fillStyle = '#555555';
                 frequencyCanvasContext.fillText(
                     notes[11 - row],
                     10,
@@ -251,7 +251,7 @@
 
             // 横軸（オクターブラベル）を描画（左が高いオクターブ、最左にOALL）
             frequencyCanvasContext.font = '10px Arial'; // フォントサイズを小さく
-            frequencyCanvasContext.fillStyle = 'black';
+            frequencyCanvasContext.fillStyle = '#555555';
             frequencyCanvasContext.textAlign = 'center';
             frequencyCanvasContext.fillText(
                 'OALL',
@@ -271,7 +271,7 @@
 
             // 棒グラフの数値ラベル用フォント設定を小さく
             frequencyCanvasContext.font = '8px Arial';
-            frequencyCanvasContext.fillStyle = 'black';
+            frequencyCanvasContext.fillStyle = '#555555';
             frequencyCanvasContext.textAlign = 'center';
 
             // 棒グラフを描画
@@ -294,7 +294,7 @@
                 );
 
                 // 数字のラベルを描画
-                frequencyCanvasContext.fillStyle = 'black';
+                frequencyCanvasContext.fillStyle = '#555555';
                 frequencyCanvasContext.fillText(
                     totalStrength.strength.toFixed(1),
                     xTotal + (barWidth - 2) / 2,
@@ -319,7 +319,7 @@
                     );
 
                     // 数字のラベルを描画
-                    frequencyCanvasContext.fillStyle = 'black';
+                    frequencyCanvasContext.fillStyle = '#555555';
                     frequencyCanvasContext.fillText(
                         noteStrength.strength.toFixed(1),
                         x + (barWidth - 2) / 2,
@@ -338,6 +338,7 @@
             const hours = ('0' + now.getHours()).slice(-2);
             const minutes = ('0' + now.getMinutes()).slice(-2);
             const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+            recordingEndTimeDiv.style.color = '#555555'; // テキスト色をグレーに設定
             recordingEndTimeDiv.textContent = `recorded at ${formattedTime}`;
         }
     </script>
