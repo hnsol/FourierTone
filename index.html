@@ -145,11 +145,12 @@
             if (isRecording) return;
             isRecording = true;
             startButton.disabled = true;
-            startButton.textContent = 'マイク使用許可をお願いします';
-
-            // 録音開始時にグラフをクリアしてラベルのみを表示
+            startButton.textContent = 'マイクにアクセス中...';
+        
+            // 録音開始時にグラフと録音終了時刻をクリアしてラベルのみを表示
             drawAxisLabels();
-
+            recordingEndTimeDiv.textContent = ''; // 録音終了時刻をクリア
+        
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(function(stream) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -157,27 +158,27 @@
                     analyser.fftSize = 2048;
                     microphone = audioContext.createMediaStreamSource(stream);
                     microphone.connect(analyser);
-
+        
                     frequencyData = new Float32Array(analyser.frequencyBinCount);
                     timeDomainData = new Uint8Array(analyser.fftSize);
                     mediaStream = stream;
-
+        
                     let remainingTime = recordingDuration;
                     startButton.textContent = `録音中... 残り ${remainingTime} 秒`;
-
+        
                     const countdownInterval = setInterval(function() {
                         remainingTime -= 1;
                         if (remainingTime >= 0) {
                             startButton.textContent = `録音中... 残り ${remainingTime} 秒`;
                         }
                     }, 1000);
-
+        
                     // 入力波形をリアルタイムで表示
                     const inputStrengthInterval = setInterval(function() {
                         analyser.getByteTimeDomainData(timeDomainData);
                         drawInputStrength(timeDomainData);
                     }, 30);
-
+        
                     setTimeout(function() {
                         clearInterval(inputStrengthInterval);
                         clearInterval(countdownInterval);
@@ -299,6 +300,7 @@
                 );
 
                 // 数字のラベルを棒の内側、下側に描画
+                frequencyCanvasContext.font = '8px Noto Sans JP'; // フォントサイズを小さく設定
                 frequencyCanvasContext.fillStyle = '#595959';
                 frequencyCanvasContext.fillText(
                     totalStrength.strength.toFixed(1),
@@ -343,7 +345,8 @@
             const day = ('0' + now.getDate()).slice(-2);
             const hours = ('0' + now.getHours()).slice(-2);
             const minutes = ('0' + now.getMinutes()).slice(-2);
-            const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+            const seconds = ('0' + now.getSeconds()).slice(-2); // 秒数を取得して2桁にフォーマット
+            const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`; // 秒数を含めたフォーマット
             recordingEndTimeDiv.style.color = '#999999'; // テキスト色をグレーに設定
             recordingEndTimeDiv.style.fontSize = '12px'; // フォントサイズを小さく設定
             recordingEndTimeDiv.textContent = `recorded at (${formattedTime})`;
