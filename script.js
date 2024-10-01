@@ -7,14 +7,21 @@ class FourierToneAnalyzer {
         this.frequencyCanvasContext = this.frequencyCanvas.getContext('2d');
         this.recordingEndTimeDiv = document.getElementById('recordingEndTime');
 
-        this.audioContext = null;
-        this.analyser = null;
-        this.microphone = null;
-        this.frequencyData = null;
-        this.timeDomainData = null;
-        this.mediaStream = null;
-        this.isRecording = false;
-        this.recordingDuration = 10; // 秒
+        this.minDb = -150;
+        this.maxDb = -30;
+
+        this.octaveDisplayFlags = {
+            'O0': true,  'O1': true, 'O2': false, 'O3': false, 'O4': false,
+            'O5': false, 'O6': true, 'O7': true,  'O8': true, 'O9': true, 
+            'OALL': false
+        }; // 各オクターブの表示フラグをディクショナリ形式で設定
+        this.buttonConfigurations = [
+            { minDb: -150, maxDb: -30 },
+            { minDb: -150, maxDb: -50 },
+            { minDb: -100, maxDb: -30 },
+            { minDb: -100, maxDb: -50 },
+            { minDb: -100, maxDb: -80 }
+        ];
 
         this.notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         this.octaves = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -25,11 +32,21 @@ class FourierToneAnalyzer {
         };
 
         this.frequencies = this.calculateFrequencies();
+        this.recordingDuration = 10; // 録音時間を10秒に設定
+        this.isRecording = false; // 録音中かどうかを管理するフラグ
         this.init();
     }
 
     init() {
         this.startButton.addEventListener('click', () => this.startRecording());
+
+        // 5つのボタン（A-E）を設定
+        for (let i = 0; i < 5; i++) {
+            document.getElementById(`button${String.fromCharCode(65 + i)}`).addEventListener('click', () => {
+                this.setDbRange(i);
+            });
+        }
+
         this.resizeCanvases();
         this.drawAxisLabels();
     }
@@ -55,28 +72,56 @@ class FourierToneAnalyzer {
 
     drawAxisLabels() {
         const rows = 12;
-        const cols = this.octaves.length + 1;
-        const barWidth = (this.frequencyCanvas.width - 60) / cols;
-        const barHeightUnit = (this.frequencyCanvas.height - 40) / rows;
-
+        const visibleOctaves = Object.keys(this.octaveDisplayFlags).filter(key => this.octaveDisplayFlags[key]).length; // OALLも含む
+        const barWidth = (this.frequencyCanvas.width - 60) / visibleOctaves; // OALLも含めた表示オクターブ分の幅
+    
         this.frequencyCanvasContext.clearRect(0, 0, this.frequencyCanvas.width, this.frequencyCanvas.height);
         this.frequencyCanvasContext.font = '14px Noto Sans JP';
         this.frequencyCanvasContext.fillStyle = '#595959';
         this.frequencyCanvasContext.textBaseline = 'middle';
+    
+        // 縦軸ラベル（音階）を表示（上が高音、下が低音にするため、配列の順序を逆に）
+        const barHeightUnit = (this.frequencyCanvas.height - 40) / rows;
         for (let row = 0; row < rows; row++) {
             this.frequencyCanvasContext.fillText(
-                this.notes[row % 12],
+                this.notes[11 - row],  // 音階の表示順序を逆にする
                 10,
                 row * barHeightUnit + barHeightUnit / 2 + 20
             );
         }
-
+    
+        // 横軸ラベル（オクターブ）を左詰めで表示
         this.frequencyCanvasContext.font = '10px Noto Sans JP';
         this.frequencyCanvasContext.textAlign = 'center';
-        this.frequencyCanvasContext.fillText('OALL', barWidth / 2 + 40, this.frequencyCanvas.height - 10);
-        for (let col = 1; col < cols; col++) {
-            this.frequencyCanvasContext.fillText(`O${9 - col + 1}`, col * barWidth + barWidth / 2 + 40, this.frequencyCanvas.height - 10);
+    
+        let colIndex = 0; // 有効なオクターブの列番号（左詰め）
+    
+        // OALLのラベル表示
+        if (this.octaveDisplayFlags['OALL']) {
+            this.frequencyCanvasContext.fillText('OALL', barWidth / 2 + 40, this.frequencyCanvas.height - 10);
+            colIndex++; // OALL列の次に進む
         }
+    
+        // 有効なオクターブのラベル表示
+        for (let col = 0; col < this.octaves.length; col++) {
+            const octaveKey = `O${9 - col}`; // O0, O1...のキー
+            if (this.octaveDisplayFlags[octaveKey]) { // フラグが true のオクターブのみ表示
+                this.frequencyCanvasContext.fillText(
+                    `O${9 - col}`,
+                    colIndex * barWidth + barWidth / 2 + 40,
+                    this.frequencyCanvas.height - 10
+                );
+                colIndex++; // 左詰めで次のオクターブに進む
+            }
+        }
+    }
+
+
+    setDbRange(index) {
+        const config = this.buttonConfigurations[index];
+        this.minDb = config.minDb;
+        this.maxDb = config.maxDb;
+        this.drawNoteStrengths(this.calculateNoteStrengths());
     }
 
     startRecording() {
@@ -205,49 +250,57 @@ class FourierToneAnalyzer {
 
     drawNoteStrengths({ strengths, totalStrengths }) {
         const rows = 12;
-        const cols = this.octaves.length + 1;
-        const barWidth = (this.frequencyCanvas.width - 60) / cols;
+        const visibleOctaves = Object.keys(this.octaveDisplayFlags).filter(key => this.octaveDisplayFlags[key]).length; // OALLも含む
+        const barWidth = (this.frequencyCanvas.width - 60) / visibleOctaves; // OALLも含めた表示オクターブ分の幅
         const barHeightUnit = (this.frequencyCanvas.height - 40) / rows;
-
-        this.drawAxisLabels();
-
-        const minDb = -140;
-        const maxDb = -30;
-
+    
+        this.drawAxisLabels(); // ラベルを再描画
+    
         for (let row = 0; row < rows; row++) {
-            const note = this.notes[11 - row];
-
+            const note = this.notes[11 - row];  // 上が高音、下が低音になるように音階を逆順に
+    
             const totalStrength = totalStrengths.find(s => s.note === note);
-            const normalizedTotalStrength = (totalStrength.strength - minDb) / (maxDb - minDb);
+            const normalizedTotalStrength = (totalStrength.strength - this.minDb) / (this.maxDb - this.minDb);
             const clampedTotalStrength = Math.max(0, Math.min(1, normalizedTotalStrength));
             const totalHeight = clampedTotalStrength * barHeightUnit;
-            const xTotal = 40;
             const y = row * barHeightUnit + 20;
-
-            this.frequencyCanvasContext.fillStyle = totalStrength.color;
-            this.frequencyCanvasContext.fillRect(
-                xTotal,
-                y + (barHeightUnit - totalHeight),
-                barWidth - 2,
-                totalHeight
-            );
-
-            this.frequencyCanvasContext.font = '8px Noto Sans JP';
-            this.frequencyCanvasContext.fillStyle = '#595959';
-            this.frequencyCanvasContext.fillText(
-                totalStrength.strength.toFixed(1),
-                xTotal + (barWidth - 2) / 2,
-                y + barHeightUnit - 5
-            );
-
-            for (let col = 1; col < cols; col++) {
-                const octave = this.octaves[col - 1];
+    
+            let colIndex = 0; // 有効なオクターブの列番号（左詰め）
+    
+            // OALLがtrueなら左詰めで描画
+            if (this.octaveDisplayFlags['OALL']) {
+                const xTotal = colIndex * barWidth + 40;
+                this.frequencyCanvasContext.fillStyle = totalStrength.color;
+                this.frequencyCanvasContext.fillRect(
+                    xTotal,
+                    y + (barHeightUnit - totalHeight),
+                    barWidth - 2,
+                    totalHeight
+                );
+    
+                this.frequencyCanvasContext.font = '8px Noto Sans JP';
+                this.frequencyCanvasContext.fillStyle = '#595959';
+                this.frequencyCanvasContext.fillText(
+                    totalStrength.strength.toFixed(1),
+                    xTotal + (barWidth - 2) / 2,
+                    y + barHeightUnit - 5
+                );
+                colIndex++; // OALL列の次に進む
+            }
+    
+            // 有効なオクターブの棒グラフを描画
+            for (let col = 0; col < this.octaves.length; col++) {
+                const octaveKey = `O${9 - col}`; // O0, O1...のキー
+                if (!this.octaveDisplayFlags[octaveKey]) continue; // フラグが false のオクターブはスキップ
+    
+                const octave = this.octaves[col];
                 const noteStrength = strengths.find(s => s.note === note + octave);
-                const normalizedStrength = (noteStrength.strength - minDb) / (maxDb - minDb);
+                const normalizedStrength = (noteStrength.strength - this.minDb) / (this.maxDb - this.minDb);
                 const clampedStrength = Math.max(0, Math.min(1, normalizedStrength));
                 const height = clampedStrength * barHeightUnit;
-                const x = col * barWidth + 40;
-
+                const x = colIndex * barWidth + 40;
+    
+                // 棒グラフの描画
                 this.frequencyCanvasContext.fillStyle = noteStrength.color;
                 this.frequencyCanvasContext.fillRect(
                     x,
@@ -255,7 +308,7 @@ class FourierToneAnalyzer {
                     barWidth - 2,
                     height
                 );
-
+    
                 this.frequencyCanvasContext.font = '8px Noto Sans JP';
                 this.frequencyCanvasContext.fillStyle = '#595959';
                 this.frequencyCanvasContext.fillText(
@@ -263,21 +316,15 @@ class FourierToneAnalyzer {
                     x + (barWidth - 2) / 2,
                     y + barHeightUnit - 5
                 );
+    
+                colIndex++; // 左詰めで次のオクターブに進む
             }
         }
     }
 
     displayRecordingEndTime() {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = ('0' + (now.getMonth() + 1)).slice(-2);
-        const day = ('0' + now.getDate()).slice(-2);
-        const hours = ('0' + now.getHours()).slice(-2);
-        const minutes = ('0' + now.getMinutes()).slice(-2);
-        const seconds = ('0' + now.getSeconds()).slice(-2);
-        const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        this.recordingEndTimeDiv.style.color = '#999999';
-        this.recordingEndTimeDiv.style.fontSize = '12px';
+        const formattedTime = now.toISOString().slice(0, 19).replace('T', ' ');
         this.recordingEndTimeDiv.textContent = `recorded at (${formattedTime})`;
     }
 }
