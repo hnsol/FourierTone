@@ -29,11 +29,11 @@
         /* キャンバスの幅と高さを固定ピクセル値で指定 */
         #inputStrengthCanvas {
             width: 300px;
-            height: 150px;
+            height: 100px;
         }
         #frequencyCanvas {
             width: 350px;
-            height: 450px;
+            height: 400px;
         }
     </style>
 </head>
@@ -42,6 +42,8 @@
     <button id="startRecording">録音開始</button>
     <canvas id="inputStrengthCanvas"></canvas>
     <canvas id="frequencyCanvas"></canvas>
+    <!-- 録音終了時刻を表示する要素を追加 -->
+    <div id="recordingEndTime"></div>
 
     <script>
         const startButton = document.getElementById('startRecording');
@@ -49,13 +51,14 @@
         const inputCanvasContext = inputCanvas.getContext('2d');
         const frequencyCanvas = document.getElementById('frequencyCanvas');
         const frequencyCanvasContext = frequencyCanvas.getContext('2d');
+        const recordingEndTimeDiv = document.getElementById('recordingEndTime');
 
         // キャンバスのサイズを設定
         function resizeCanvases() {
             inputCanvas.width = 300;
-            inputCanvas.height = 150;
+            inputCanvas.height = 100;
             frequencyCanvas.width = 350;
-            frequencyCanvas.height = 450;
+            frequencyCanvas.height = 400;
         }
         resizeCanvases();
 
@@ -67,9 +70,9 @@
         let mediaStream;
         let isRecording = false;
 
-        // 音階とオクターブ
+        // 音階とオクターブの定義
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // Cが低い音、Bが高い音
-        const octaves = [7, 6, 5, 4, 3, 2, 1, 0]; // 高いオクターブが左
+        const octaves = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]; // 高いオクターブが左
 
         // 音階に対応する色
         const noteColors = {
@@ -87,13 +90,14 @@
             'B': '#F06292'     // マゼンタ
         };
 
-        // 各オクターブと音階の周波数と色
+        // 各オクターブと音階の周波数と色を計算
         const frequencies = [];
         octaves.forEach(octave => {
             notes.forEach((note) => {
-                const frequency = 16.35 * Math.pow(2, octave + notes.indexOf(note) / 12);
-                const color = noteColors[note]; // 音階名のみで色を取得
-                frequencies.push({ note: note + octave, frequency: frequency, color: color });
+                const noteIndex = notes.indexOf(note);
+                const frequency = 16.35 * Math.pow(2, octave + noteIndex / 12);
+                const color = noteColors[note];
+                frequencies.push({ note: note + octave, frequency: frequency, color: color, baseNote: note });
             });
         });
 
@@ -140,6 +144,7 @@
                         analyser.getFloatFrequencyData(frequencyData);
                         const strengths = calculateNoteStrengths(frequencyData);
                         drawNoteStrengths(strengths);
+                        displayRecordingEndTime(); // 録音終了時刻を表示
                         stopRecording();
                     }, recordingDuration * 1000);
                 })
@@ -198,17 +203,31 @@
                 const decibel = frequencyData[index] || -Infinity;
                 return {
                     note: f.note,
+                    baseNote: f.baseNote,
                     strength: decibel,
                     color: f.color
                 };
             });
-            return strengths;
+
+            // 各音階ごとに全オクターブの強度を合計
+            const totalStrengths = notes.map(note => {
+                const noteStrengths = strengths.filter(s => s.baseNote === note).map(s => s.strength);
+                const totalStrength = noteStrengths.reduce((a, b) => a + Math.pow(10, b / 10), 0); // パワー（線形値）で合計
+                const avgDecibel = 10 * Math.log10(totalStrength); // 合計パワーをデシベル値に変換
+                return {
+                    note: note,
+                    strength: avgDecibel,
+                    color: noteColors[note]
+                };
+            });
+
+            return { strengths, totalStrengths };
         }
 
         // 音階の強度をグラフで表示
-        function drawNoteStrengths(strengths) {
+        function drawNoteStrengths({ strengths, totalStrengths }) {
             const rows = 12; // 12音階
-            const cols = 8;  // 8オクターブ
+            const cols = octaves.length + 1; // オクターブ数 + 1 (OALL列)
 
             const barWidth = (frequencyCanvas.width - 60) / cols;
             const barHeightUnit = (frequencyCanvas.height - 40) / rows;
@@ -216,7 +235,7 @@
             // キャンバスをクリア
             frequencyCanvasContext.clearRect(0, 0, frequencyCanvas.width, frequencyCanvas.height);
 
-            // フォント設定
+            // フォント設定（縦軸ラベルはそのまま）
             frequencyCanvasContext.font = '14px Arial';
             frequencyCanvasContext.textBaseline = 'middle';
 
@@ -230,12 +249,18 @@
                 );
             }
 
-            // 横軸（オクターブラベル）を描画（左が高いオクターブ）
-            for (let col = 0; col < cols; col++) {
-                frequencyCanvasContext.fillStyle = 'black';
-                frequencyCanvasContext.textAlign = 'center';
+            // 横軸（オクターブラベル）を描画（左が高いオクターブ、最左にOALL）
+            frequencyCanvasContext.font = '10px Arial'; // フォントサイズを小さく
+            frequencyCanvasContext.fillStyle = 'black';
+            frequencyCanvasContext.textAlign = 'center';
+            frequencyCanvasContext.fillText(
+                'OALL',
+                barWidth / 2 + 40,
+                frequencyCanvas.height - 10
+            );
+            for (let col = 1; col < cols; col++) {
                 frequencyCanvasContext.fillText(
-                    'O' + octaves[col],
+                    'O' + octaves[col - 1],
                     col * barWidth + barWidth / 2 + 40,
                     frequencyCanvas.height - 10
                 );
@@ -244,28 +269,76 @@
             const minDb = -100;
             const maxDb = -30;
 
+            // 棒グラフの数値ラベル用フォント設定を小さく
+            frequencyCanvasContext.font = '8px Arial';
+            frequencyCanvasContext.fillStyle = 'black';
+            frequencyCanvasContext.textAlign = 'center';
+
             // 棒グラフを描画
-            for (let col = 0; col < cols; col++) {
-                for (let row = 0; row < rows; row++) {
-                    const i = col * rows + (rows - 1 - row); // インデックス修正
-                    const strength = strengths[i];
-                    const x = col * barWidth + 40;
-                    const y = row * barHeightUnit + 20;
+            for (let row = 0; row < rows; row++) {
+                const note = notes[11 - row]; // 上が高い音
+                // OALL列
+                const totalStrength = totalStrengths.find(s => s.note === note);
+                const normalizedTotalStrength = (totalStrength.strength - minDb) / (maxDb - minDb);
+                const clampedTotalStrength = Math.max(0, Math.min(1, normalizedTotalStrength));
+                const totalHeight = clampedTotalStrength * barHeightUnit;
+                const xTotal = 40;
+                const y = row * barHeightUnit + 20;
 
-                    const normalizedStrength = (strength.strength - minDb) / (maxDb - minDb);
+                frequencyCanvasContext.fillStyle = totalStrength.color;
+                frequencyCanvasContext.fillRect(
+                    xTotal,
+                    y + (barHeightUnit - totalHeight),
+                    barWidth - 2,
+                    totalHeight
+                );
+
+                // 数字のラベルを描画
+                frequencyCanvasContext.fillStyle = 'black';
+                frequencyCanvasContext.fillText(
+                    totalStrength.strength.toFixed(1),
+                    xTotal + (barWidth - 2) / 2,
+                    y + (barHeightUnit - totalHeight) - 8
+                );
+
+                // 各オクターブ列
+                for (let col = 1; col < cols; col++) {
+                    const octave = octaves[col - 1];
+                    const noteStrength = strengths.find(s => s.note === note + octave);
+                    const normalizedStrength = (noteStrength.strength - minDb) / (maxDb - minDb);
                     const clampedStrength = Math.max(0, Math.min(1, normalizedStrength));
-
                     const height = clampedStrength * barHeightUnit;
+                    const x = col * barWidth + 40;
 
-                    frequencyCanvasContext.fillStyle = strength.color;
+                    frequencyCanvasContext.fillStyle = noteStrength.color;
                     frequencyCanvasContext.fillRect(
                         x,
                         y + (barHeightUnit - height),
                         barWidth - 2,
                         height
                     );
+
+                    // 数字のラベルを描画
+                    frequencyCanvasContext.fillStyle = 'black';
+                    frequencyCanvasContext.fillText(
+                        noteStrength.strength.toFixed(1),
+                        x + (barWidth - 2) / 2,
+                        y + (barHeightUnit - height) - 8
+                    );
                 }
             }
+        }
+
+        // 録音終了時刻を表示
+        function displayRecordingEndTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = ('0' + (now.getMonth() + 1)).slice(-2);
+            const day = ('0' + now.getDate()).slice(-2);
+            const hours = ('0' + now.getHours()).slice(-2);
+            const minutes = ('0' + now.getMinutes()).slice(-2);
+            const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+            recordingEndTimeDiv.textContent = `recorded at ${formattedTime}`;
         }
     </script>
 </body>
