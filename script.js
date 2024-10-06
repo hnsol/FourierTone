@@ -1,4 +1,75 @@
 class FourierToneAnalyzer {
+
+    constructor() {
+        this.startButton = document.getElementById('startRecording');
+        this.inputCanvas = document.getElementById('inputStrengthCanvas');
+        this.inputCanvasContext = this.inputCanvas.getContext('2d');
+        this.frequencyCanvas = document.getElementById('frequencyCanvas');
+        this.frequencyCanvasContext = this.frequencyCanvas.getContext('2d');
+        this.recordingEndTimeDiv = document.getElementById('recordingEndTime');
+        this.dbValuesDiv = document.getElementById('dbValues'); // minDbとmaxDbを表示する要素
+
+        this.buttonConfigurations = [
+            { minDb: -100, maxDb: -35 },
+            { minDb: -110, maxDb: -40 },
+            { minDb: -120, maxDb: -45 },
+            { minDb: -130, maxDb: -50 },
+            { minDb: -140, maxDb: -55 }
+        ];
+
+        // 初期化: 最初のボタンのminDbとmaxDbを設定
+        this.minDb = this.buttonConfigurations[0].minDb;
+        this.maxDb = this.buttonConfigurations[0].maxDb;
+        this.highlightActiveButton(0);
+
+        this.octaveDisplayFlags = {
+            'O0': false, 'O1': true, 'O2': true, 'O3': true, 'O4': true,
+            'O5': true,  'O6': true, 'O7': true, 'O8': true, 'O9': true,
+            'OALL': false
+        }; // 各オクターブの表示フラグをディクショナリ形式で設定
+
+        this.notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        this.octaves = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+        this.noteColors = {
+            'C': '#E57373', 'C#': '#FF8A65', 'D': '#FFB74D', 'D#': '#FFD54F',
+            'E': '#FFF176', 'F': '#AED581', 'F#': '#81C784', 'G': '#4DD0E1',
+            'G#': '#4FC3F7', 'A': '#7986CB', 'A#': '#BA68C8', 'B': '#F06292'
+        };
+
+        this.frequenciesEqualTemperament = this.calculateFrequenciesEqualTemperament();
+        this.frequenciesChakraTuning = this.calculateFrequenciesChakraTuning();
+        this.currentFrequencies = this.frequenciesChakraTuning; // 初期状態ではチャクラ音律を使用
+
+        this.recordingDuration = 10; // 録音時間を10秒に設定
+//        this.recordingDuration = 3; // 録音時間を10秒に設定
+        this.isRecording = false; // 録音中かどうかを管理するフラグ
+        this.init();
+    }
+
+    init() {
+        this.startButton.addEventListener('click', () => this.startRecording());
+
+        // 5つのボタン（A-E）を設定
+        for (let i = 0; i < 5; i++) {
+            const button = document.getElementById(`button${String.fromCharCode(65 + i)}`);
+            button.addEventListener('click', () => {
+                this.setDbRange(i);
+                this.highlightActiveButton(i);
+            });
+        }
+
+        // 新しいボタン F の設定: frequencies を切り替える
+        document.getElementById('buttonF').addEventListener('click', () => {
+            this.toggleFrequencies();
+        });
+
+        // 最初にminDbとmaxDbを表示
+        this.updateDbDisplay();
+
+        this.resizeCanvases();
+        this.drawAxisLabels();
+    }
+
     highlightActiveButton(activeIndex) {
         for (let i = 0; i < 5; i++) {
             const button = document.getElementById(`button${String.fromCharCode(65 + i)}`);
@@ -56,91 +127,21 @@ class FourierToneAnalyzer {
             }
         }
     }
-    constructor() {
-        this.startButton = document.getElementById('startRecording');
-        this.inputCanvas = document.getElementById('inputStrengthCanvas');
-        this.inputCanvasContext = this.inputCanvas.getContext('2d');
-        this.frequencyCanvas = document.getElementById('frequencyCanvas');
-        this.frequencyCanvasContext = this.frequencyCanvas.getContext('2d');
-        this.recordingEndTimeDiv = document.getElementById('recordingEndTime');
-        this.dbValuesDiv = document.getElementById('dbValues'); // minDbとmaxDbを表示する要素
-
-        this.buttonConfigurations = [
-            { minDb: -100, maxDb: -35 },
-            { minDb: -110, maxDb: -40 },
-            { minDb: -120, maxDb: -45 },
-            { minDb: -130, maxDb: -50 },
-            { minDb: -140, maxDb: -55 }
-        ];
-
-        // 初期化: 最初のボタンのminDbとmaxDbを設定
-        this.minDb = this.buttonConfigurations[0].minDb;
-        this.maxDb = this.buttonConfigurations[0].maxDb;
-        this.highlightActiveButton(0);
-
-        this.octaveDisplayFlags = {
-            'O0': true,  'O1': true,  'O2': false, 'O3': false, 'O4': false,
-            'O5': false, 'O6': false, 'O7': true, 'O8': true,  'O9': true,
-            'OALL': false
-        }; // 各オクターブの表示フラグをディクショナリ形式で設定
-
-        this.notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        this.octaves = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
-        this.noteColors = {
-            'C': '#E57373', 'C#': '#FF8A65', 'D': '#FFB74D', 'D#': '#FFD54F',
-            'E': '#FFF176', 'F': '#AED581', 'F#': '#81C784', 'G': '#4DD0E1',
-            'G#': '#4FC3F7', 'A': '#7986CB', 'A#': '#BA68C8', 'B': '#F06292'
-        };
-
-        this.frequenciesEqualTemperament = this.calculateFrequenciesEqualTemperament();
-        this.frequenciesChakraTuning = this.calculateFrequenciesChakraTuning();
-        this.currentFrequencies = this.frequenciesChakraTuning; // 初期状態ではチャクラ音律を使用
-
-        this.recordingDuration = 10; // 録音時間を10秒に設定
-//        this.recordingDuration = 3; // 録音時間を10秒に設定
-        this.isRecording = false; // 録音中かどうかを管理するフラグ
-        this.init();
-    }
-
-    init() {
-        this.startButton.addEventListener('click', () => this.startRecording());
-
-        // 5つのボタン（A-E）を設定
-        for (let i = 0; i < 5; i++) {
-            const button = document.getElementById(`button${String.fromCharCode(65 + i)}`);
-            button.addEventListener('click', () => {
-                this.setDbRange(i);
-                this.highlightActiveButton(i);
-            });
-        }
-
-        // 新しいボタン F の設定: frequencies を切り替える
-        document.getElementById('buttonF').addEventListener('click', () => {
-            this.toggleFrequencies();
-        });
-
-        // 最初にminDbとmaxDbを表示
-        this.updateDbDisplay();
-
-        this.resizeCanvases();
-        this.drawAxisLabels();
-    }
-
     calculateFrequenciesEqualTemperament() {
         let frequencies = [];
         const frequencyData = [
-            [12.375, 24.750, 49.500, 99.000, 198.000, 396.000, 792.000, 1584.000, 3168.000, 6336.000],
-            [12.699, 25.398, 50.796, 101.591, 203.182, 406.364, 812.729, 1625.457, 3250.915, 6501.830],
-            [13.031, 26.063, 52.125, 104.250, 208.500, 417.000, 834.000, 1668.000, 3336.000, 6672.000],
-            [14.663, 29.327, 58.654, 117.307, 234.615, 469.229, 938.458, 1876.917, 3753.833, 7507.666],
-            [16.500, 33.000, 66.000, 132.000, 264.000, 528.000, 1056.000, 2112.000, 4224.000, 8448.000],
-            [19.969, 39.938, 79.875, 159.750, 319.500, 639.000, 1278.000, 2556.000, 5112.000, 10224.000],
-            [21.504, 43.007, 86.014, 172.028, 344.056, 688.113, 1376.225, 2752.451, 5504.901, 11009.802],
-            [23.156, 46.313, 92.625, 185.250, 370.500, 741.000, 1482.000, 2964.000, 5928.000, 11856.000],
-            [24.830, 49.660, 99.321, 198.641, 397.282, 794.564, 1589.128, 3178.256, 6356.512, 12713.025],
-            [26.625, 53.250, 106.500, 213.000, 426.000, 852.000, 1704.000, 3408.000, 6816.000, 13632.000],
-            [28.306, 56.613, 113.225, 226.450, 452.901, 905.801, 1811.603, 3623.205, 7246.410, 14492.821],
-            [30.094, 60.188, 120.375, 240.750, 481.500, 963.000, 1926.000, 3852.000, 7704.000, 15408.000]
+            [16.35, 32.70, 65.41, 130.81, 261.63, 523.25, 1046.50, 2093.00, 4186.01, 8372.02],
+            [17.32, 34.65, 69.30, 138.59, 277.18, 554.37, 1108.73, 2217.46, 4434.92, 8869.84],
+            [18.35, 36.71, 73.42, 146.83, 293.66, 587.33, 1174.66, 2349.32, 4698.63, 9397.27],
+            [19.45, 38.89, 77.78, 155.56, 311.13, 622.25, 1244.51, 2489.02, 4978.03, 9956.06],
+            [20.60, 41.20, 82.41, 164.81, 329.63, 659.25, 1318.51, 2637.02, 5274.04, 10548.08],
+            [21.83, 43.65, 87.31, 174.61, 349.23, 698.46, 1396.91, 2793.83, 5587.65, 11175.30],
+            [23.12, 46.25, 92.50, 185.00, 369.99, 739.99, 1479.98, 2959.96, 5919.91, 11839.82],
+            [24.50, 49.00, 98.00, 196.00, 392.00, 783.99, 1567.98, 3135.96, 6271.93, 12543.85],
+            [25.96, 51.91, 103.83, 207.65, 415.30, 830.61, 1661.22, 3322.44, 6644.88, 13289.76],
+            [27.50, 55.00, 110.00, 220.00, 440.00, 880.00, 1760.00, 3520.00, 7040.00, 14080.00],
+            [29.14, 58.27, 116.54, 233.08, 466.16, 932.33, 1864.66, 3729.31, 7458.62, 14917.24],
+            [30.87, 61.74, 123.47, 246.94, 493.88, 987.77, 1975.53, 3951.07, 7902.13, 15804.27]
         ];
 
         this.notes.forEach((note, noteIndex) => {
@@ -157,18 +158,18 @@ class FourierToneAnalyzer {
         let frequencies = [];
         // Chakra tuning の frequency data をハードコードします（例）
         const frequencyData = [
-            [16.35, 32.70, 65.41, 130.81, 261.63, 523.25, 1046.50, 2093.00, 4186.01, 8372.02],
-            [17.32, 34.65, 69.30, 138.59, 277.18, 554.37, 1108.73, 2217.46, 4434.92, 8869.84],
-            [18.35, 36.71, 73.42, 146.83, 293.66, 587.33, 1174.66, 2349.32, 4698.63, 9397.27],
-            [19.45, 38.89, 77.78, 155.56, 311.13, 622.25, 1244.51, 2489.02, 4978.03, 9956.06],
-            [20.60, 41.20, 82.41, 164.81, 329.63, 659.25, 1318.51, 2637.02, 5274.04, 10548.08],
-            [21.83, 43.65, 87.31, 174.61, 349.23, 698.46, 1396.91, 2793.83, 5587.65, 11175.30],
-            [23.12, 46.25, 92.50, 185.00, 369.99, 739.99, 1479.98, 2959.96, 5919.91, 11839.82],
-            [24.50, 49.00, 98.00, 196.00, 392.00, 783.99, 1567.98, 3135.96, 6271.93, 12543.85],
-            [25.96, 51.91, 103.83, 207.65, 415.30, 830.61, 1661.22, 3322.44, 6644.88, 13289.76],
-            [27.50, 55.00, 110.00, 220.00, 440.00, 880.00, 1760.00, 3520.00, 7040.00, 14080.00],
-            [29.14, 58.27, 116.54, 233.08, 466.16, 932.33, 1864.66, 3729.31, 7458.62, 14917.24],
-            [30.87, 61.74, 123.47, 246.94, 493.88, 987.77, 1975.53, 3951.07, 7902.13, 15804.27]
+            [12.375, 24.750, 49.500, 99.000, 198.000, 396.000, 792.000, 1584.000, 3168.000, 6336.000],
+            [12.699, 25.398, 50.796, 101.591, 203.182, 406.364, 812.729, 1625.457, 3250.915, 6501.830],
+            [13.031, 26.063, 52.125, 104.250, 208.500, 417.000, 834.000, 1668.000, 3336.000, 6672.000],
+            [14.663, 29.327, 58.654, 117.307, 234.615, 469.229, 938.458, 1876.917, 3753.833, 7507.666],
+            [16.500, 33.000, 66.000, 132.000, 264.000, 528.000, 1056.000, 2112.000, 4224.000, 8448.000],
+            [19.969, 39.938, 79.875, 159.750, 319.500, 639.000, 1278.000, 2556.000, 5112.000, 10224.000],
+            [21.504, 43.007, 86.014, 172.028, 344.056, 688.113, 1376.225, 2752.451, 5504.901, 11009.802],
+            [23.156, 46.313, 92.625, 185.250, 370.500, 741.000, 1482.000, 2964.000, 5928.000, 11856.000],
+            [24.830, 49.660, 99.321, 198.641, 397.282, 794.564, 1589.128, 3178.256, 6356.512, 12713.025],
+            [26.625, 53.250, 106.500, 213.000, 426.000, 852.000, 1704.000, 3408.000, 6816.000, 13632.000],
+            [28.306, 56.613, 113.225, 226.450, 452.901, 905.801, 1811.603, 3623.205, 7246.410, 14492.821],
+            [30.094, 60.188, 120.375, 240.750, 481.500, 963.000, 1926.000, 3852.000, 7704.000, 15408.000]
         ];
 
         this.notes.forEach((note, noteIndex) => {
