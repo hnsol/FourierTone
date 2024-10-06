@@ -97,7 +97,7 @@ class FourierToneAnalyzer {
         this.currentFrequencies = this.frequenciesChakraTuning; // 初期状態ではチャクラ音律を使用
 
         this.recordingDuration = 10; // 録音時間を10秒に設定
-÷        this.recordingDuration = 3; // 録音時間を10秒に設定
+//        this.recordingDuration = 3; // 録音時間を10秒に設定
         this.isRecording = false; // 録音中かどうかを管理するフラグ
         this.init();
     }
@@ -415,8 +415,9 @@ class FourierToneAnalyzer {
 
     displayRecordingEndTime() {
         const now = new Date();
+        now.setHours(now.getHours() + 9); // 日本時間（UTC+9）に変換
         const formattedTime = now.toISOString().slice(0, 19).replace('T', ' ');
-        this.recordingEndTimeDiv.textContent = `recorded at (${formattedTime})`;
+        this.recordingEndTimeDiv.textContent = `recorded at (${formattedTime} JST)`;
     }
 }
 
