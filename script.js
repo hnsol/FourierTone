@@ -1,4 +1,17 @@
 class FourierToneAnalyzer {
+    highlightActiveButton(activeIndex) {
+        for (let i = 0; i < 5; i++) {
+            const button = document.getElementById(`button${String.fromCharCode(65 + i)}`);
+            if (i === activeIndex) {
+                button.style.backgroundColor = '#a9a9a9'; // アクティブなボタンの色（デフォルトより少し濃いグレー）
+                button.style.color = 'white';
+            } else {
+                button.style.backgroundColor = '';
+                button.style.color = '';
+            }
+        }
+    }
+    
     drawAxisLabels() {
         const rows = 12;
         const visibleOctaves = Object.keys(this.octaveDisplayFlags).filter(key => this.octaveDisplayFlags[key]).length; // OALLも含む
@@ -63,6 +76,7 @@ class FourierToneAnalyzer {
         // 初期化: 最初のボタンのminDbとmaxDbを設定
         this.minDb = this.buttonConfigurations[0].minDb;
         this.maxDb = this.buttonConfigurations[0].maxDb;
+        this.highlightActiveButton(0);
 
         this.octaveDisplayFlags = {
             'O0': true,  'O1': true,  'O2': false, 'O3': false, 'O4': false,
@@ -83,6 +97,7 @@ class FourierToneAnalyzer {
         this.currentFrequencies = this.frequenciesChakraTuning; // 初期状態ではチャクラ音律を使用
 
         this.recordingDuration = 10; // 録音時間を10秒に設定
+÷        this.recordingDuration = 3; // 録音時間を10秒に設定
         this.isRecording = false; // 録音中かどうかを管理するフラグ
         this.init();
     }
@@ -92,8 +107,10 @@ class FourierToneAnalyzer {
 
         // 5つのボタン（A-E）を設定
         for (let i = 0; i < 5; i++) {
-            document.getElementById(`button${String.fromCharCode(65 + i)}`).addEventListener('click', () => {
+            const button = document.getElementById(`button${String.fromCharCode(65 + i)}`);
+            button.addEventListener('click', () => {
                 this.setDbRange(i);
+                this.highlightActiveButton(i);
             });
         }
 
