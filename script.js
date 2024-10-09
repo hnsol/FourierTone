@@ -23,8 +23,8 @@ class FourierToneAnalyzer {
         this.highlightActiveButton(0);
 
         this.octaveDisplayFlags = {
-            'O0': false, 'O1': true, 'O2': true, 'O3': true, 'O4': true,
-            'O5': true,  'O6': true, 'O7': true, 'O8': true, 'O9': true,
+            'O0': false, 'O1': true, 'O2': true, 'O3': false, 'O4': true,
+            'O5': true,  'O6': true, 'O7': false, 'O8': false, 'O9': false,
             'OALL': false
         }; // 各オクターブの表示フラグをディクショナリ形式で設定
 
