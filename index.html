@@ -2,11 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<!-- モバイル端末での表示最適化 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>音声録音とフーリエ変換</title>
 <style>
 body {
     font-family: sans-serif;
-    margin: 20px;
+    margin: 10px;
+    padding: 0;
 }
 #container {
     display: flex;
@@ -16,6 +19,15 @@ body {
 #recordingArea, #graphArea {
     border: 1px solid #ccc;
     padding: 10px;
+    box-sizing: border-box;
+}
+
+/* iPhone等で画面幅を有効活用するため、幅は100%内に収まるように */
+canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
 }
 #controls {
     margin-bottom: 10px;
@@ -23,6 +35,7 @@ body {
 #timer {
     margin-top: 5px;
     font-weight: bold;
+    font-size: 14px;
 }
 #visualizer {
     border: 1px solid #ccc;
@@ -30,6 +43,14 @@ body {
 }
 #graphControls {
     margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+#graphTypeBtns, .minValBtns, .octaveBtns {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
 }
 #graphTypeBtns button.selected {
     background-color: #add8e6; /* 選択中: ライトブルー */
@@ -54,7 +75,8 @@ body {
             <button id="startBtn">録音開始</button>
             <div id="timer"></div>
         </div>
-        <canvas id="visualizer" width="300" height="80"></canvas>
+        <!-- サイズは後でJSでセット -->
+        <canvas id="visualizer"></canvas>
     </div>
 
     <div id="graphArea">
@@ -76,7 +98,8 @@ body {
                 <button class="octaveBtn" data-oct="VC2">VC2</button>
             </div>
         </div>
-        <canvas id="fftCanvas" width="600" height="600"></canvas>
+        <!-- サイズは後でJSでウィンドウ幅に合わせてセット -->
+        <canvas id="fftCanvas"></canvas>
     </div>
 </div>
 
@@ -199,18 +222,27 @@ body {
         "VC2-2": false
     };
 
+    // 画面幅に応じてキャンバスサイズを決定
+    const screenWidth = Math.min(window.innerWidth, 600); // 最大600pxくらいまで
+    // 可視化キャンバスは横幅の80%程度、高さは適度に
+    visualizer.width = screenWidth * 0.8;
+    visualizer.height = 80; // 高さ固定でもOK
+
+    // FFT用キャンバスは正方形に近い形で表示
+    fftCanvas.width = screenWidth * 0.9;
+    fftCanvas.height = fftCanvas.width; 
+
+    let canvasWidth = fftCanvas.width;
+    let canvasHeight = fftCanvas.height;
     const rows = 13; 
     const cols = 5; 
-    const canvasWidth = 600;
-    const canvasHeight = 600;
     const cellWidth = Math.floor(canvasWidth / cols);
     const cellHeight = Math.floor(canvasHeight / rows);
 
     // 円状グラフ用設定
-    // C=210°,C#=180°,D=150°,D#=120°,E=90°,F=60°,F#=30°,G=0°,G#=330°,A=300°,A#=270°,B=240°
     const circleNotesOrder = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
     const octaveCircleOrder = ["VC0","VC1","VC2-1","VC2-2"];
-    const baseRadii = { "VC0":250, "VC1":200, "VC2-1":150, "VC2-2":100 };
+    const baseRadii = { "VC0":canvasWidth*0.416, "VC1":canvasWidth*0.333, "VC2-1":canvasWidth*0.25, "VC2-2":canvasWidth*0.166 };
 
     function updateGraphTypeSelection(){
         graphTypeBtns.forEach(b=>b.classList.remove('selected'));
@@ -223,8 +255,6 @@ body {
     function updateOctaveSelection() {
         octaveBtns.forEach(btn => {
             const oct = btn.getAttribute('data-oct');
-
-            // VC2がトグルされる場合は、VC2-1とVC2-2も影響を受ける
             if (oct === "VC2") {
                 if (octaveStates["VC2-1"] && octaveStates["VC2-2"]) {
                     btn.classList.add('selected');
@@ -232,7 +262,6 @@ body {
                     btn.classList.remove('selected');
                 }
             } else {
-                // その他のボタン状態の更新
                 if (octaveStates[oct]) btn.classList.add('selected');
                 else btn.classList.remove('selected');
             }
@@ -299,7 +328,6 @@ body {
                 octaveStates["VC2-1"] = newState;
                 octaveStates["VC2-2"] = newState;
             } else {
-                // 通常のボタンのトグル
                 octaveStates[oct] = !octaveStates[oct];
             }
 
@@ -473,9 +501,6 @@ body {
         }
     }
 
-    // 上からB9...C9, B8...C8, B3...C3, B2...C2にするため、
-    // 元がC→...→Bの順なのでreverseでB→...→Cになる。  
-    // ただし指定は「上からB9...C9, B8...C8, ...」なので、octaveノートをreverseして使う
     function reversedNotes(octave) {
         return [...octave.notes].reverse();
     }
@@ -484,7 +509,6 @@ body {
         fftCtx.fillStyle = 'white';
         fftCtx.fillRect(0, 0, fftCanvas.width, fftCanvas.height);
 
-        // グリッド
         fftCtx.strokeStyle = '#ccc';
         for (let r = 0; r <= rows; r++) {
             fftCtx.beginPath();
@@ -502,7 +526,6 @@ body {
         fftCtx.fillStyle = 'black';
         fftCtx.font = '10px sans-serif';
 
-        // トップヘッダ
         for (let c = 0; c < topHeaders.length; c++) {
             const text = topHeaders[c];
             const x = (c+1)*cellWidth + 2; 
@@ -510,7 +533,6 @@ body {
             fftCtx.fillText(text, x, y);
         }
 
-        // 左ヘッダ
         for (let r = 0; r < leftHeaders.length; r++) {
             const text = leftHeaders[r];
             const x = 2;
@@ -522,7 +544,7 @@ body {
 
         for (let o = 0; o < octaves.length; o++) {
             const octave = octaves[o];
-            if(!octaveStates[octave.name]) continue; // OFFなら表示しない
+            if(!octaveStates[octave.name]) continue; 
 
             const oNorm = octaveNorms[octave.name];
             const minVal = oNorm.minVal;
@@ -567,19 +589,19 @@ body {
         fftCtx.fillStyle = 'white';
         fftCtx.fillRect(0,0,fftCanvas.width, fftCanvas.height);
 
-        const cx=300;const cy=300;
+        const cx=fftCanvas.width/2;
+        const cy=fftCanvas.height/2;
         const freqToIndex=(freq)=>Math.round(freq*fftSize/sampleRate);
-
         function degToRad(d){return d*Math.PI/180;}
 
-        // 放射状の線 (0°,30°,60°,...330°)グレー
+        // 放射状ライン
         fftCtx.strokeStyle='gray';
         for(let i=0;i<12;i++){
             const angleDeg=210-(i*30);
             const angleRad=degToRad((angleDeg+360)%360);
             fftCtx.beginPath();
             fftCtx.moveTo(cx,cy);
-            fftCtx.lineTo(cx+300*Math.cos(angleRad),cy+300*Math.sin(angleRad));
+            fftCtx.lineTo(cx+(fftCanvas.width/2)*Math.cos(angleRad),cy+(fftCanvas.height/2)*Math.sin(angleRad));
             fftCtx.stroke();
         }
 
@@ -592,7 +614,7 @@ body {
         }
 
         for(const oName of octaveCircleOrder){
-            if(!octaveStates[oName]) continue; // OFFなら表示しない
+            if(!octaveStates[oName]) continue; 
             const octave=octaves.find(o=>o.name===oName);
             const oNorm=octaveNorms[oName];
             const minVal=oNorm.minVal;
@@ -613,7 +635,7 @@ body {
                     const val=normalize(amplitudes[idx]);
                     const clippedVal=Math.max(intensityMin,Math.min(100,val));
                     const intensityRatio=(clippedVal-intensityMin)/(100-intensityMin);
-                    const radius=baseR+intensityRatio*50;
+                    const radius=baseR+intensityRatio*(fftCanvas.width*0.083); // 約1/12半径増加
 
                     const freqRatio=(freq - note.fStart)/(note.fEnd-note.fStart);
                     const startDeg=noteAngle(note.name);
@@ -631,7 +653,7 @@ body {
             }
         }
 
-        // 同心円:外からVC0,VC1,VC2-1,VC2-2、グレー
+        // 同心円
         fftCtx.strokeStyle='gray';
         for(const oName of octaveCircleOrder){
             fftCtx.beginPath();
