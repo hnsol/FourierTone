@@ -595,15 +595,30 @@ canvas {
         function degToRad(d){return d*Math.PI/180;}
 
         // 放射状ライン
-        fftCtx.strokeStyle='gray';
-        for(let i=0;i<12;i++){
-            const angleDeg=210-(i*30);
-            const angleRad=degToRad((angleDeg+360)%360);
+        fftCtx.strokeStyle = 'gray';
+
+        for (let i = 0; i < 12; i++) {
+            const angleDeg = 210 - (i * 30);
+            const angleRad = degToRad((angleDeg + 360) % 360);
+            
+            // 実線と破線の切り替え: 30°, 150°, 270°は実線、それ以外は破線
+            if (i === 0 || i === 4 || i === 8) {
+                fftCtx.setLineDash([]); // 実線
+            } else {
+                fftCtx.setLineDash([5, 5]); // 破線: ダッシュ長さ5px, 間隔5px
+            }
+            
             fftCtx.beginPath();
-            fftCtx.moveTo(cx,cy);
-            fftCtx.lineTo(cx+(fftCanvas.width/2)*Math.cos(angleRad),cy+(fftCanvas.height/2)*Math.sin(angleRad));
+            fftCtx.moveTo(cx, cy);
+            fftCtx.lineTo(
+                cx + (fftCanvas.width / 2) * Math.cos(angleRad),
+                cy + (fftCanvas.height / 2) * Math.sin(angleRad)
+            );
             fftCtx.stroke();
         }
+        
+        // 最後にlineDashをリセットしておく
+        fftCtx.setLineDash([]);
 
         function noteAngle(noteName){
             const baseName=noteName.replace(/[0-9]/g,'');
