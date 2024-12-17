@@ -73,8 +73,7 @@ body {
             <div class="octaveBtns">
                 <button class="octaveBtn" data-oct="VC0">VC0</button>
                 <button class="octaveBtn" data-oct="VC1">VC1</button>
-                <button class="octaveBtn" data-oct="VC2-1">VC2-1</button>
-                <button class="octaveBtn" data-oct="VC2-2">VC2-2</button>
+                <button class="octaveBtn" data-oct="VC2">VC2</button>
             </div>
         </div>
         <canvas id="fftCanvas" width="600" height="600"></canvas>
@@ -89,25 +88,6 @@ body {
     const octaves = [
         {
             name: "VC0",
-            rangeStart: 8137.1,
-            rangeEnd: 16274.2,
-            notes: [
-                {name:"C9",fStart:8137.1,fEnd:8620.9,color:"red"},
-                {name:"C#9",fStart:8620.9,fEnd:9133.6,color:"coral"},
-                {name:"D9",fStart:9133.6,fEnd:9676.7,color:"orange"},
-                {name:"D#9",fStart:9676.7,fEnd:10252.1,color:"gold"},
-                {name:"E9",fStart:10252.1,fEnd:10861.7,color:"greenyellow"},
-                {name:"F9",fStart:10861.7,fEnd:11507.6,color:"limegreen"},
-                {name:"F#9",fStart:11507.6,fEnd:12191.8,color:"mediumspringgreen"},
-                {name:"G9",fStart:12191.8,fEnd:12916.8,color:"aqua"},
-                {name:"G#9",fStart:12916.8,fEnd:13684.9,color:"blue"},
-                {name:"A9",fStart:13684.9,fEnd:14498.6,color:"navy"},
-                {name:"A#9",fStart:14498.6,fEnd:15360.8,color:"violet"},
-                {name:"B9",fStart:15360.8,fEnd:16274.2,color:"magenta"}
-            ]
-        },
-        {
-            name: "VC1",
             rangeStart: 4068.5,
             rangeEnd: 8137.1,
             notes: [
@@ -123,6 +103,25 @@ body {
                 {name:"A8",fStart:6842.4,fEnd:7249.3,color:"navy"},
                 {name:"A#8",fStart:7249.3,fEnd:7680.4,color:"violet"},
                 {name:"B8",fStart:7680.4,fEnd:8137.1,color:"magenta"}
+            ]
+        },
+        {
+            name: "VC1",
+            rangeStart: 2034.3,
+            rangeEnd: 4068.5,
+            notes: [
+                {name:"C7",fStart:2034.3,fEnd:2155.2,color:"red"},
+                {name:"C#7",fStart:2155.2,fEnd:2283.4,color:"coral"},
+                {name:"D7",fStart:2283.4,fEnd:2419.2,color:"orange"},
+                {name:"D#7",fStart:2419.2,fEnd:2563.0,color:"gold"},
+                {name:"E7",fStart:2563.0,fEnd:2715.4,color:"greenyellow"},
+                {name:"F7",fStart:2715.4,fEnd:2876.9,color:"limegreen"},
+                {name:"F#7",fStart:2876.9,fEnd:3048.0,color:"mediumspringgreen"},
+                {name:"G7",fStart:3048.0,fEnd:3229.2,color:"aqua"},
+                {name:"G#7",fStart:3229.2,fEnd:3421.2,color:"blue"},
+                {name:"A7",fStart:3421.2,fEnd:3624.7,color:"navy"},
+                {name:"A#7",fStart:3624.7,fEnd:3840.2,color:"violet"},
+                {name:"B7",fStart:3840.2,fEnd:4068.5,color:"magenta"}
             ]
         },
         {
@@ -194,7 +193,8 @@ body {
     // オクターブのON/OFF状態
     let octaveStates = {
         "VC0": false,
-        "VC1": false,
+        "VC1": true,
+        "VC2": false,
         "VC2-1": false,
         "VC2-2": false
     };
@@ -221,13 +221,24 @@ body {
         document.querySelector(`.minValBtn[data-min="${intensityMin}"]`).classList.add('selected');
     }
     function updateOctaveSelection() {
-        octaveBtns.forEach(btn=>{
+        octaveBtns.forEach(btn => {
             const oct = btn.getAttribute('data-oct');
-            if(octaveStates[oct]) btn.classList.add('selected');
-            else btn.classList.remove('selected');
+
+            // VC2がトグルされる場合は、VC2-1とVC2-2も影響を受ける
+            if (oct === "VC2") {
+                if (octaveStates["VC2-1"] && octaveStates["VC2-2"]) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            } else {
+                // その他のボタン状態の更新
+                if (octaveStates[oct]) btn.classList.add('selected');
+                else btn.classList.remove('selected');
+            }
         });
     }
-
+    
     updateGraphTypeSelection();
     updateMinValSelection();
     updateOctaveSelection();
@@ -278,12 +289,22 @@ body {
         });
     });
 
-    octaveBtns.forEach(btn=>{
-        btn.addEventListener('click',()=>{
+    octaveBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
             const oct = btn.getAttribute('data-oct');
-            octaveStates[oct] = !octaveStates[oct];
+
+            if (oct === "VC2") {
+                // VC2が押された場合はVC2-1とVC2-2をトグル
+                const newState = !(octaveStates["VC2-1"] && octaveStates["VC2-2"]);
+                octaveStates["VC2-1"] = newState;
+                octaveStates["VC2-2"] = newState;
+            } else {
+                // 通常のボタンのトグル
+                octaveStates[oct] = !octaveStates[oct];
+            }
+
             updateOctaveSelection();
-            if(!recording && amplitudes) drawCurrentGraph();
+            if (!recording && amplitudes) drawCurrentGraph();
         });
     });
 
