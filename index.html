@@ -53,13 +53,15 @@ canvas {
     flex-wrap: wrap;
 }
 #graphTypeBtns button.selected {
-    background-color: #add8e6; /* 選択中: ライトブルー */
+    background-color: #4FC3F7; /* 明るい水色 (G#のカラーに合わせた柔らかい色) */
 }
+
 .minValBtns button.selected {
-    background-color: #ffa; /* 選択中: 薄い黄色 */
+    background-color: #FFD54F; /* 明るい黄色 (D#のカラーをソフトにした色) */
 }
+
 .octaveBtns button.selected {
-    background-color: #dfd; /* 選択中: 薄い緑 */
+    background-color: #AED581; /* 柔らかい緑 (Fのカラーに近い落ち着いた色) */
 }
 #fftCanvas {
     border: 1px solid #ccc;
@@ -114,18 +116,18 @@ canvas {
             rangeStart: 4068.5,
             rangeEnd: 8137.1,
             notes: [
-                {name:"C8",fStart:4068.5,fEnd:4310.5,color:"red"},
-                {name:"C#8",fStart:4310.5,fEnd:4566.8,color:"coral"},
-                {name:"D8",fStart:4566.8,fEnd:4838.3,color:"orange"},
-                {name:"D#8",fStart:4838.3,fEnd:5126.0,color:"gold"},
-                {name:"E8",fStart:5126.0,fEnd:5430.8,color:"greenyellow"},
-                {name:"F8",fStart:5430.8,fEnd:5753.8,color:"limegreen"},
-                {name:"F#8",fStart:5753.8,fEnd:6095.9,color:"mediumspringgreen"},
-                {name:"G8",fStart:6095.9,fEnd:6458.4,color:"aqua"},
-                {name:"G#8",fStart:6458.4,fEnd:6842.4,color:"blue"},
-                {name:"A8",fStart:6842.4,fEnd:7249.3,color:"navy"},
-                {name:"A#8",fStart:7249.3,fEnd:7680.4,color:"violet"},
-                {name:"B8",fStart:7680.4,fEnd:8137.1,color:"magenta"}
+                {name:"C8",fStart:4068.5,fEnd:4310.5,color:"#E57373"},
+                {name:"C#8",fStart:4310.5,fEnd:4566.8,color:"#FF8A65"},
+                {name:"D8",fStart:4566.8,fEnd:4838.3,color:"#FFB74D"},
+                {name:"D#8",fStart:4838.3,fEnd:5126.0,color:"#FFD54F"},
+                {name:"E8",fStart:5126.0,fEnd:5430.8,color:"#FFF176"},
+                {name:"F8",fStart:5430.8,fEnd:5753.8,color:"#AED581"},
+                {name:"F#8",fStart:5753.8,fEnd:6095.9,color:"#81C784"},
+                {name:"G8",fStart:6095.9,fEnd:6458.4,color:"#4DD0E1"},
+                {name:"G#8",fStart:6458.4,fEnd:6842.4,color:"#4FC3F7"},
+                {name:"A8",fStart:6842.4,fEnd:7249.3,color:"#7986CB"},
+                {name:"A#8",fStart:7249.3,fEnd:7680.4,color:"#BA68C8"},
+                {name:"B8",fStart:7680.4,fEnd:8137.1,color:"#F06292"}
             ]
         },
         {
@@ -133,18 +135,18 @@ canvas {
             rangeStart: 2034.3,
             rangeEnd: 4068.5,
             notes: [
-                {name:"C7",fStart:2034.3,fEnd:2155.2,color:"red"},
-                {name:"C#7",fStart:2155.2,fEnd:2283.4,color:"coral"},
-                {name:"D7",fStart:2283.4,fEnd:2419.2,color:"orange"},
-                {name:"D#7",fStart:2419.2,fEnd:2563.0,color:"gold"},
-                {name:"E7",fStart:2563.0,fEnd:2715.4,color:"greenyellow"},
-                {name:"F7",fStart:2715.4,fEnd:2876.9,color:"limegreen"},
-                {name:"F#7",fStart:2876.9,fEnd:3048.0,color:"mediumspringgreen"},
-                {name:"G7",fStart:3048.0,fEnd:3229.2,color:"aqua"},
-                {name:"G#7",fStart:3229.2,fEnd:3421.2,color:"blue"},
-                {name:"A7",fStart:3421.2,fEnd:3624.7,color:"navy"},
-                {name:"A#7",fStart:3624.7,fEnd:3840.2,color:"violet"},
-                {name:"B7",fStart:3840.2,fEnd:4068.5,color:"magenta"}
+                {name:"C7",fStart:2034.3,fEnd:2155.2,color:"#E57373"},
+                {name:"C#7",fStart:2155.2,fEnd:2283.4,color:"#FF8A65"},
+                {name:"D7",fStart:2283.4,fEnd:2419.2,color:"#FFB74D"},
+                {name:"D#7",fStart:2419.2,fEnd:2563.0,color:"#FFD54F"},
+                {name:"E7",fStart:2563.0,fEnd:2715.4,color:"#FFF176"},
+                {name:"F7",fStart:2715.4,fEnd:2876.9,color:"#AED581"},
+                {name:"F#7",fStart:2876.9,fEnd:3048.0,color:"#81C784"},
+                {name:"G7",fStart:3048.0,fEnd:3229.2,color:"#4DD0E1"},
+                {name:"G#7",fStart:3229.2,fEnd:3421.2,color:"#4FC3F7"},
+                {name:"A7",fStart:3421.2,fEnd:3624.7,color:"#7986CB"},
+                {name:"A#7",fStart:3624.7,fEnd:3840.2,color:"#BA68C8"},
+                {name:"B7",fStart:3840.2,fEnd:4068.5,color:"#F06292"}
             ]
         },
         {
@@ -152,18 +154,18 @@ canvas {
             rangeStart: 127.1,
             rangeEnd: 254.3,
             notes: [
-                {name:"C3",fStart:127.1,fEnd:134.7,color:"red"},
-                {name:"C#3",fStart:134.7,fEnd:142.7,color:"coral"},
-                {name:"D3",fStart:142.7,fEnd:151.2,color:"orange"},
-                {name:"D#3",fStart:151.2,fEnd:160.2,color:"gold"},
-                {name:"E3",fStart:160.2,fEnd:169.7,color:"greenyellow"},
-                {name:"F3",fStart:169.7,fEnd:179.8,color:"limegreen"},
-                {name:"F#3",fStart:179.8,fEnd:190.5,color:"mediumspringgreen"},
-                {name:"G3",fStart:190.5,fEnd:201.8,color:"aqua"},
-                {name:"G#3",fStart:201.8,fEnd:213.8,color:"blue"},
-                {name:"A3",fStart:213.8,fEnd:226.5,color:"navy"},
-                {name:"A#3",fStart:226.5,fEnd:240.0,color:"violet"},
-                {name:"B3",fStart:240.0,fEnd:254.3,color:"magenta"}
+                {name:"C3",fStart:127.1,fEnd:134.7,color:"#E57373"},
+                {name:"C#3",fStart:134.7,fEnd:142.7,color:"#FF8A65"},
+                {name:"D3",fStart:142.7,fEnd:151.2,color:"#FFB74D"},
+                {name:"D#3",fStart:151.2,fEnd:160.2,color:"#FFD54F"},
+                {name:"E3",fStart:160.2,fEnd:169.7,color:"#FFF176"},
+                {name:"F3",fStart:169.7,fEnd:179.8,color:"#AED581"},
+                {name:"F#3",fStart:179.8,fEnd:190.5,color:"#81C784"},
+                {name:"G3",fStart:190.5,fEnd:201.8,color:"#4DD0E1"},
+                {name:"G#3",fStart:201.8,fEnd:213.8,color:"#4FC3F7"},
+                {name:"A3",fStart:213.8,fEnd:226.5,color:"#7986CB"},
+                {name:"A#3",fStart:226.5,fEnd:240.0,color:"#BA68C8"},
+                {name:"B3",fStart:240.0,fEnd:254.3,color:"#F06292"}
             ]
         },
         {
@@ -171,22 +173,21 @@ canvas {
             rangeStart: 63.6,
             rangeEnd: 127.1,
             notes: [
-                {name:"C2",fStart:63.6,fEnd:67.4,color:"red"},
-                {name:"C#2",fStart:67.4,fEnd:71.4,color:"coral"},
-                {name:"D2",fStart:71.4,fEnd:75.6,color:"orange"},
-                {name:"D#2",fStart:75.6,fEnd:80.1,color:"gold"},
-                {name:"E2",fStart:80.1,fEnd:84.9,color:"greenyellow"},
-                {name:"F2",fStart:84.9,fEnd:89.9,color:"limegreen"},
-                {name:"F#2",fStart:89.9,fEnd:95.2,color:"mediumspringgreen"},
-                {name:"G2",fStart:95.2,fEnd:100.9,color:"aqua"},
-                {name:"G#2",fStart:100.9,fEnd:106.9,color:"blue"},
-                {name:"A2",fStart:106.9,fEnd:113.3,color:"navy"},
-                {name:"A#2",fStart:113.3,fEnd:120.0,color:"violet"},
-                {name:"B2",fStart:120.0,fEnd:127.1,color:"magenta"}
+                {name:"C2",fStart:63.6,fEnd:67.4,color:"#E57373"},
+                {name:"C#2",fStart:67.4,fEnd:71.4,color:"#FF8A65"},
+                {name:"D2",fStart:71.4,fEnd:75.6,color:"#FFB74D"},
+                {name:"D#2",fStart:75.6,fEnd:80.1,color:"#FFD54F"},
+                {name:"E2",fStart:80.1,fEnd:84.9,color:"#FFF176"},
+                {name:"F2",fStart:84.9,fEnd:89.9,color:"#AED581"},
+                {name:"F#2",fStart:89.9,fEnd:95.2,color:"#81C784"},
+                {name:"G2",fStart:95.2,fEnd:100.9,color:"#4DD0E1"},
+                {name:"G#2",fStart:100.9,fEnd:106.9,color:"#4FC3F7"},
+                {name:"A2",fStart:106.9,fEnd:113.3,color:"#7986CB"},
+                {name:"A#2",fStart:113.3,fEnd:120.0,color:"#BA68C8"},
+                {name:"B2",fStart:120.0,fEnd:127.1,color:"#F06292"}
             ]
         }
     ];
-
     const leftHeaders = ["M","V","N","B","A","E","L","Y","G","O","C","R"];
     const topHeaders = ["VC0","VC1","VC2-1","VC2-2"];
 
