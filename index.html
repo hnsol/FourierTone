@@ -82,17 +82,17 @@ canvas {
     margin-bottom: 10px;
 }
 .noteBox {
-    width: 60px;
-    height: 40px;
+    display: inline-flex; /* inline-block ではなく inline-flex を使用 */
+    justify-content: center; /* 水平方向の中央揃え */
+    align-items: center; /* 垂直方向の中央揃え */
+    padding: 3px; /* ボックス内の余白 */
     color: #444444;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
     font-size: 12px;
     text-align: center;
     border-radius: 3px;
     background-color: #f7f7f7; /* 薄いグレー背景 */
+    white-space: nowrap; /* 改行を防ぐ */
+    flex-direction: column; /* テキストを縦方向に配置 */
 }
 .noteBox div {
     line-height: 1.2;
@@ -622,10 +622,14 @@ canvas {
 
     function showNoteSummary() {
         if (!window.noteSummaryData) return;
-        const data = window.noteSummaryData;
         const noteLabelMap = {
             "C":"R", "C#":"C", "D":"O", "D#":"G", "E":"Y", "F":"L",
             "F#":"E", "G":"S", "G#":"A", "A":"B", "A#":"N", "B":"V" };
+        const data = window.noteSummaryData;
+
+        // 構成比の小さい順にソート
+        data.sort((a, b) => a.ratio - b.ratio);
+
         noteSummaryDiv.innerHTML = '';
         for (let i = 0; i < data.length; i++) {
             const item = data[i];
@@ -634,8 +638,12 @@ canvas {
             // 上位3つと下位3つは元のカラー、それ以外は薄いグレー
             if (i < 3 || i >= data.length - 3) {
                 div.style.backgroundColor = item.color;
+                div.style.fontSize = '0.75em'; // 親要素の80%のサイズ
+                div.style.padding = '3px'; // 通常のパディング
             } else {
                 // div.style.backgroundColor = '##f7f7f7';
+                div.style.fontSize = '0.5em'; // 親要素の50%のサイズ
+                div.style.padding = '1px'; // 小さめのパディング
             }
             const line1 = document.createElement('div');
             // line1.textContent = item.name;
