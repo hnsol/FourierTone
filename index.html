@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <!-- モバイル端末での表示最適化 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>音声録音とフーリエ変換</title>
+<title>さほう、Sahou</title>
 <!-- Font Awesome をCDNで読み込み -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
 body {
-    color: #444444; /* 濃いめのグレー */
+    color: #444444; 
     font-family: sans-serif;
     margin: 10px;
     padding: 0;
@@ -25,7 +25,6 @@ body {
     box-sizing: border-box;
 }
 
-/* iPhone等で画面幅を有効活用するため、幅は100%内に収まるように */
 canvas {
     max-width: 100%;
     height: auto;
@@ -56,62 +55,136 @@ canvas {
     flex-wrap: wrap;
 }
 #graphTypeBtns button.selected {
-    background-color: #4FC3F7; /* 明るい水色 (G#のカラーに合わせた柔らかい色) */
+    background-color: #4FC3F7; 
 }
-
 .minValBtns button.selected {
-    background-color: #FFD54F; /* 明るい黄色 (D#のカラーをソフトにした色) */
+    background-color: #FFD54F; 
 }
-
 .octaveBtns button.selected {
-    background-color: #AED581; /* 柔らかい緑 (Fのカラーに近い落ち着いた色) */
+    background-color: #AED581; 
 }
-#fftCanvas {
-    border: 1px solid #ccc;
-    display: block;
-    margin-top: 10px;
-}
-
 #noteSummary {
     display: flex;
     gap: 5px;
-    /* flex-wrap: wrap; を削除 */
     flex-wrap: nowrap;
-    /* 横スクロールできるように */
     overflow-x: auto;
     margin-bottom: 10px;
 }
 .noteBox {
-    display: inline-flex; /* inline-block ではなく inline-flex を使用 */
-    justify-content: center; /* 水平方向の中央揃え */
-    align-items: center; /* 垂直方向の中央揃え */
-    padding: 3px; /* ボックス内の余白 */
+    display: inline-flex;
+    justify-content: center; 
+    align-items: center; 
+    padding: 3px; 
     color: #444444;
     font-size: 12px;
     text-align: center;
     border-radius: 3px;
-    background-color: #f7f7f7; /* 薄いグレー背景 */
-    white-space: nowrap; /* 改行を防ぐ */
-    flex-direction: column; /* テキストを縦方向に配置 */
+    background-color: #f7f7f7; 
+    white-space: nowrap; 
+    flex-direction: column; 
 }
 .noteBox div {
     line-height: 1.2;
 }
 .noteBox div:last-child {
-    font-size: 0.3em; /* 下の行のみフォントサイズを縮小 */
+    font-size: 0.3em; 
+}
+
+/* グラフ管理エリア */
+#graphManagement {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+#viewModeBtns {
+    display: flex;
+    gap: 5px;
+    margin-right: 10px;
+}
+#savedGraphsBtns {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.graphBtn {
+    border: 1px solid #ccc;
+    background: #eee;
+    padding: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.graphBtn.selected {
+    background: #ccc;
+}
+.graphCanvasContainer {
+    position: relative;
+}
+.graphHeader {
+    font-size: 12px;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.graphHeader span {
+    margin-right: 10px;
+}
+.deleteBtn {
+    background: #f88;
+    border: none;
+    padding: 2px 5px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* デフォルトレイアウト(単一表示用) */
+#graphsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* シングルビュー時（1枚表示） */
+.singleView #graphsContainer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+}
+.singleView .graphCanvasContainer canvas {
+    width: 90% !important;
+    height: auto !important;
+}
+
+/* マルチビュー時（4x2表示） */
+.multipleView #graphsContainer {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 20px !important;
+}
+.multipleView .graphCanvasContainer {
+    width: 100% !important;
+}
+.multipleView .graphCanvasContainer canvas {
+    width: 100px !important;
+    height: 100px !important;
+}
+
+@media (max-width: 600px) {
+    .multipleView #graphsContainer {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
 }
 </style>
 </head>
 <body>
 <div id="container">
     <div id="recordingArea">
-        <div id="controls">
-            <button id="startBtn">
-                <i class="fas fa-play"></i>
-            </button>
-            <div id="timer"></div>
-        </div>
-        <!-- サイズは後でJSでセット -->
         <canvas id="visualizer"></canvas>
     </div>
 
@@ -134,19 +207,98 @@ canvas {
                 <button class="minValBtn" data-min="90">90&lt;</button>
             </div>
         </div>
-
-        <!-- 上部に12音階の構成比表示用エリア -->
         <div id="noteSummary"></div>
 
-        <!-- サイズは後でJSでウィンドウ幅に合わせてセット -->
-        <canvas id="fftCanvas"></canvas>
+        <div id="graphManagement">
+            <div id="viewModeBtns">
+                <button id="allViewBtn"><i class="fas fa-th-large"></i></button>
+                <button id="singleViewBtn"><i class="fas fa-square"></i></button>
+            </div>
+            <div id="savedGraphsBtns"></div>
+        </div>
+
+        <div id="graphsContainer"></div>
+
     </div>
 </div>
 
 <script>
+// Modify the recording button layout
+const startBtnContainer = document.createElement('div');
+startBtnContainer.style.display = 'flex';
+startBtnContainer.style.alignItems = 'center';
+startBtnContainer.style.gap = '10px';
+
+const recordingTimerElement = document.createElement('div');
+recordingTimerElement.id = 'timer';
+recordingTimerElement.style.fontWeight = 'bold';
+recordingTimerElement.style.fontSize = '14px';
+
+const startBtn = document.createElement('button');
+startBtn.id = 'startBtn';
+startBtn.innerHTML = '<i class="fas fa-play"></i>';
+
+startBtnContainer.appendChild(startBtn);
+startBtnContainer.appendChild(recordingTimerElement);
+
+const controlsDiv = document.createElement('div');
+controlsDiv.id = 'controls';
+controlsDiv.appendChild(startBtnContainer);
+
+document.getElementById('recordingArea').prepend(controlsDiv);
+
 (async function() {
     const RECORD_SECONDS = 10;
+    let graphCounter = 1; // グラフ番号カウンタ
+    const MAX_GRAPHS = 8; 
+    let savedGraphs = []; // {id, date, amplitudes, noteSummaryData}
 
+    // 共通設定
+    let currentGraphType = "circle"; 
+    let intensityMin = 50; 
+    let octaveStates = {
+        "VC0": false,
+        "VC1": true,
+        "VC2-1": false,
+        "VC2-2": false
+    };
+
+    let singleViewMode = true; // true: 一枚表示, false: 全表示
+    let selectedGraphId = null; 
+
+    const leftHeaders = ["M","V","N","B","A","E","L","Y","G","O","C","R"];
+    const topHeaders = ["VC0","VC1","VC2-1","VC2-2"];
+
+    const startBtn = document.getElementById('startBtn');
+    const timerEl = document.getElementById('timer');
+    const visualizer = document.getElementById('visualizer');
+    const vCtx = visualizer.getContext('2d');
+    const noteSummaryDiv = document.getElementById('noteSummary');
+    const graphTypeBtns = document.querySelectorAll('.graphTypeBtn');
+    const minValBtns = document.querySelectorAll('.minValBtn');
+    const octaveBtns = document.querySelectorAll('.octaveBtn');
+    const singleViewBtn = document.getElementById('singleViewBtn');
+    const allViewBtn = document.getElementById('allViewBtn');
+    const savedGraphsBtns = document.getElementById('savedGraphsBtns');
+    const graphsContainer = document.getElementById('graphsContainer');
+
+    let audioStream;
+    let audioContext;
+    let mediaStreamSource;
+    let analyserNode;
+    let recordingData = [];
+    let recording = false;
+    let startTime;
+    let recordingTimer; 
+    let rafId;
+
+    const screenWidth = Math.min(window.innerWidth, 600); 
+    visualizer.width = screenWidth * 0.8;
+    visualizer.height = 80; 
+
+    // グラフ描画用の設定（各グラフは独自canvasを持つ）
+    // FFT設定は録音後都度計算
+    
     // オクターブ定義
     const octaves = [
         {
@@ -226,68 +378,16 @@ canvas {
             ]
         }
     ];
-    const leftHeaders = ["M","V","N","B","A","E","L","Y","G","O","C","R"];
-    const topHeaders = ["VC0","VC1","VC2-1","VC2-2"];
-
-    let audioStream;
-    let audioContext;
-    let mediaStreamSource;
-    let analyserNode;
-    let recordingData = [];
-    let recording = false;
-    let startTime;
-    let recordingTimer; // タイマーIDを保存
-    let rafId;
-
-    const startBtn = document.getElementById('startBtn');
-    const timerEl = document.getElementById('timer');
-    const visualizer = document.getElementById('visualizer');
-    const vCtx = visualizer.getContext('2d');
-    const fftCanvas = document.getElementById('fftCanvas');
-    const fftCtx = fftCanvas.getContext('2d');
-    const noteSummaryDiv = document.getElementById('noteSummary');
-
-    const graphTypeBtns = document.querySelectorAll('.graphTypeBtn');
-    const minValBtns = document.querySelectorAll('.minValBtn');
-    const octaveBtns = document.querySelectorAll('.octaveBtn');
-
-    let currentGraphType = "circle"; 
-    let intensityMin = 50; // 初期値:50<
-
-    // オクターブのON/OFF状態
-    let octaveStates = {
-        "VC0": false,
-        "VC1": true,
-        "VC2-1": false,
-        "VC2-2": false
-    };
-
-    // 画面幅に応じてキャンバスサイズを決定
-    const screenWidth = Math.min(window.innerWidth, 600); // 最大600pxくらいまで
-    visualizer.width = screenWidth * 0.8;
-    visualizer.height = 80; 
-    fftCanvas.width = screenWidth * 0.9;
-    fftCanvas.height = fftCanvas.width; 
-
-    let canvasWidth = fftCanvas.width;
-    let canvasHeight = fftCanvas.height;
-    const rows = 13; 
-    const cols = 5; 
-    const cellWidth = Math.floor(canvasWidth / cols);
-    const cellHeight = Math.floor(canvasHeight / rows);
-
-    // 円状グラフ用設定
-    const circleNotesOrder = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-    const octaveCircleOrder = ["VC0","VC1","VC2-1","VC2-2"];
-    const baseRadii = { "VC0":canvasWidth*0.416, "VC1":canvasWidth*0.333, "VC2-1":canvasWidth*0.25, "VC2-2":canvasWidth*0.166 };
 
     function updateGraphTypeSelection(){
         graphTypeBtns.forEach(b=>b.classList.remove('selected'));
         document.querySelector(`.graphTypeBtn[data-type="${currentGraphType}"]`).classList.add('selected');
+        redrawAllGraphs();
     }
     function updateMinValSelection(){
         minValBtns.forEach(b=>b.classList.remove('selected'));
         document.querySelector(`.minValBtn[data-min="${intensityMin}"]`).classList.add('selected');
+        redrawAllGraphs();
     }
     function updateOctaveSelection() {
         octaveBtns.forEach(btn => {
@@ -303,13 +403,26 @@ canvas {
                 else btn.classList.remove('selected');
             }
         });
+        redrawAllGraphs();
     }
-    
+
+    function updateViewModeButtons() {
+        if (singleViewMode) {
+            singleViewBtn.style.backgroundColor = '#4FC3F7';
+            allViewBtn.style.backgroundColor = '';
+        } else {
+            singleViewBtn.style.backgroundColor = '';
+            allViewBtn.style.backgroundColor = '#4FC3F7';
+        }
+        redrawAllGraphs();
+    }
+
     updateGraphTypeSelection();
     updateMinValSelection();
     updateOctaveSelection();
+    updateViewModeButtons();
 
-    async function init() {
+    async function initAudio() {
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         audioContext = new AudioContext();
         mediaStreamSource = audioContext.createMediaStreamSource(audioStream);
@@ -332,7 +445,7 @@ canvas {
         recorderNode.connect(audioContext.destination);
     }
 
-    await init();
+    await initAudio();
 
     startBtn.addEventListener('click', () => {
         if (recording) {
@@ -348,10 +461,6 @@ canvas {
         btn.addEventListener('click',()=>{
             currentGraphType = btn.dataset.type;
             updateGraphTypeSelection();
-            if(!recording && amplitudes) {
-                drawCurrentGraph();
-                showNoteSummary();
-            }
         });
     });
 
@@ -359,10 +468,6 @@ canvas {
         btn.addEventListener('click',()=>{
             intensityMin = parseInt(btn.getAttribute('data-min'),10);
             updateMinValSelection();
-            if(!recording && amplitudes) {
-                drawCurrentGraph();
-                showNoteSummary();
-            }
         });
     });
 
@@ -371,7 +476,6 @@ canvas {
             const oct = btn.getAttribute('data-oct');
 
             if (oct === "VC2") {
-                // VC2が押された場合はVC2-1とVC2-2をトグル
                 const newState = !(octaveStates["VC2-1"] && octaveStates["VC2-2"]);
                 octaveStates["VC2-1"] = newState;
                 octaveStates["VC2-2"] = newState;
@@ -380,11 +484,17 @@ canvas {
             }
 
             updateOctaveSelection();
-            if (!recording && amplitudes) {
-                drawCurrentGraph();
-                showNoteSummary();
-            }
         });
+    });
+
+    singleViewBtn.addEventListener('click', () => {
+        singleViewMode = true;
+        updateViewModeButtons();
+    });
+
+    allViewBtn.addEventListener('click', () => {
+        singleViewMode = false;
+        updateViewModeButtons();
     });
 
     function startRecording() {
@@ -401,7 +511,7 @@ canvas {
         recordingTimer = setTimeout(() => {
             if (recording) {
                 stopRecording();
-                processFFT(); 
+                processFFT();
             }
         }, RECORD_SECONDS * 1000);
 
@@ -432,6 +542,7 @@ canvas {
 
     function drawWaveform() {
         if (!recording) return;
+
         const bufferLength = analyserNode.fftSize;
         const dataArray = new Uint8Array(bufferLength);
         analyserNode.getByteTimeDomainData(dataArray);
@@ -439,7 +550,7 @@ canvas {
         vCtx.fillStyle = 'white';
         vCtx.fillRect(0, 0, visualizer.width, visualizer.height);
 
-        vCtx.strokeStyle = 'black';
+        vCtx.strokeStyle = '#444444';
         vCtx.beginPath();
         const sliceWidth = visualizer.width * 1.0 / bufferLength;
         let x = 0;
@@ -507,13 +618,10 @@ canvas {
         }
     }
 
-    let amplitudes, sampleRate, fftSize;
-    let octaveNorms;
-
     function processFFT() {
-        sampleRate = audioContext.sampleRate;
+        const sampleRate = audioContext.sampleRate;
         let length = recordingData.length;
-        fftSize = 1;
+        let fftSize = 1;
         while (fftSize * 2 <= length) {
             fftSize *= 2;
         }
@@ -531,18 +639,62 @@ canvas {
 
         fft(real, imag);
 
-        amplitudes = new Float32Array(fftSize/2);
-        for (let i = 0; i < fftSize/2; i++) {
-            const mag = Math.sqrt(real[i]*real[i] + imag[i]*imag[i]);
+        const amplitudes = new Float32Array(fftSize / 2);
+        for (let i = 0; i < fftSize / 2; i++) {
+            const mag = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
             const dB = 20 * Math.log10(mag + 1e-10);
             amplitudes[i] = dB;
         }
 
-        octaveNorms = {};
+        const noteSummaryData = calcNoteSummary(amplitudes, fftSize, sampleRate);
+
+        const now = new Date();
+        const dateStr = now.getFullYear() + "-" +
+                        String(now.getMonth() + 1).padStart(2, '0') + "-" +
+                        String(now.getDate()).padStart(2, '0') + " " +
+                        String(now.getHours()).padStart(2, '0') + ":" +
+                        String(now.getMinutes()).padStart(2, '0') + ":" +
+                        String(now.getSeconds()).padStart(2, '0');
+
+        const graphId = String(graphCounter).padStart(2, '0');
+        graphCounter++;
+
+        const graphData = {
+            id: graphId,
+            date: dateStr,
+            amplitudes: amplitudes,
+            fftSize: fftSize,
+            sampleRate: sampleRate,
+            noteSummaryData: noteSummaryData
+        };
+
+        if (savedGraphs.length >= MAX_GRAPHS) {
+            savedGraphs.shift();
+        }
+        savedGraphs.push(graphData);
+
+        // 自動で新しいグラフを選択
+        selectedGraphId = graphId;
+        singleViewMode = true;
+
+        updateSavedGraphsButtons();
+        redrawAllGraphs();
+        updateViewModeButtons(); // ここでビュー切り替えボタンを再更新する
+    }
+
+    function calcNoteSummary(amplitudes, fftSize, sampleRate){
+        const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+        const noteData = {};
+        for (const nName of noteNames) {
+            noteData[nName] = [];
+        }
+
         function freqToIndex(freq) {
             return Math.round(freq * fftSize / sampleRate);
         }
 
+        // 各オクターブでのmin/max正規化用
+        const octaveNorms = {};
         for (const octave of octaves) {
             const startIndex = freqToIndex(octave.rangeStart);
             const endIndex = Math.min(freqToIndex(octave.rangeEnd), amplitudes.length-1);
@@ -557,19 +709,8 @@ canvas {
             octaveNorms[octave.name] = {minVal, maxVal};
         }
 
-        // ここから12音階ごとの平均値と構成比を計算
-        const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-        const noteData = {};
-        for (const nName of noteNames) {
-            noteData[nName] = [];
-        }
-
-        // 各ノートの周波数範囲から平均値を計算する
-        // 指定された4つのオクターブ領域（VC0、VC1、VC2-1、VC2-2）で同じ音名に対応する範囲をすべて集める
-        // 例：CならVC0のC8, VC1のC7, VC2-1のC3, VC2-2のC2を対象とする
         for (const octave of octaves) {
             for (const note of octave.notes) {
-                // ノート名から音階記号部分のみ取得 (C8 -> C)
                 const baseNoteName = note.name.replace(/[0-9]/g,'');
                 const startIdx = freqToIndex(note.fStart);
                 const endIdx = Math.min(freqToIndex(note.fEnd), amplitudes.length - 1);
@@ -586,258 +727,346 @@ canvas {
             }
         }
 
-        // 4オクターブ分の平均値を再度平均
         const noteAvgIntensity = [];
-        // 同時に色を取得（VC0にある同音階の色を使用）
+        const vc0notes = octaves[0].notes;
         const noteColorMap = {};
         for (const nName of noteNames) {
             const values = noteData[nName];
-            // valuesには4つ程度の平均値が入っているはず
             const avgAll = values.reduce((a,b)=>a+b,0)/values.length;
             noteAvgIntensity.push({name:nName, avg:avgAll});
-            
-            // 色はVC0からの対応するノートを探して取る
-            // VC0のnotesを参照し、同じbaseNoteNameのcolorを取得
-            const vc0Note = octaves[0].notes.find(nt => nt.name.replace(/[0-9]/g,'')===nName);
+
+            const vc0Note = vc0notes.find(nt => nt.name.replace(/[0-9]/g,'')===nName);
             if (vc0Note) {
                 noteColorMap[nName] = vc0Note.color;
             } else {
-                noteColorMap[nName] = "#000000"; // fallback
+                noteColorMap[nName] = "#000000";
             }
         }
 
-        // 構成比計算
         const sumAll = noteAvgIntensity.reduce((acc,cur)=>acc+cur.avg,0);
         for (const ni of noteAvgIntensity) {
             ni.ratio = sumAll > 0 ? (ni.avg / sumAll)*100 : 0;
             ni.color = noteColorMap[ni.name];
         }
 
-        // 大きい順に並べる
-        noteAvgIntensity.sort((a,b)=>b.ratio - a.ratio);
-
-        // 計算結果をグローバルに保持
-        window.noteSummaryData = noteAvgIntensity;
-
-        drawCurrentGraph();
-        showNoteSummary();
+        return noteAvgIntensity;
     }
 
-    function showNoteSummary() {
-        if (!window.noteSummaryData) return;
+    function updateSavedGraphsButtons(){
+        savedGraphsBtns.innerHTML = '';
+        for (const g of savedGraphs) {
+            const btn = document.createElement('button');
+            btn.className = 'graphBtn';
+            btn.textContent = g.id;
+            if (selectedGraphId === g.id) {
+                btn.classList.add('selected');
+            }
+            btn.title = g.date;
+            btn.addEventListener('click', () => {
+                selectedGraphId = g.id;
+                singleViewMode = true;
+                updateViewModeButtons();
+                updateSavedGraphsButtons();
+            });
+            savedGraphsBtns.appendChild(btn);
+        }
+    }
+
+    function redrawAllGraphs() {
+        graphsContainer.innerHTML = '';
+        noteSummaryDiv.innerHTML = '';
+
+        if (savedGraphs.length === 0) return;
+
+        // 親要素である#graphAreaを取得
+        const graphArea = document.getElementById('graphArea');
+
+        // singleViewModeに応じて#graphAreaにクラスを付与・削除
+        if (singleViewMode) {
+            graphArea.classList.add('singleView');
+            graphArea.classList.remove('multipleView');
+            const graph = savedGraphs.find(g=>g.id===selectedGraphId) || savedGraphs[savedGraphs.length-1];
+            selectedGraphId = graph.id;
+            updateSavedGraphsButtons();
+            drawGraph(graph);
+            showNoteSummary(graph.noteSummaryData);
+        } else {
+            graphArea.classList.remove('singleView');
+            graphArea.classList.add('multipleView');
+            // 全表示
+            for (const g of savedGraphs) {
+                drawGraph(g);
+            }
+            // multipleView時はnoteSummaryを空など、任意で対応
+        }
+    }
+
+    function showNoteSummary(data) {
+        if (!data) return;
+
         const noteLabelMap = {
             "C":"R", "C#":"C", "D":"O", "D#":"G", "E":"Y", "F":"L",
-            "F#":"E", "G":"S", "G#":"A", "A":"B", "A#":"N", "B":"V" };
-        const data = window.noteSummaryData;
-
-        // 構成比の小さい順にソート
-        data.sort((a, b) => a.ratio - b.ratio);
-
+            "F#":"E", "G":"S", "G#":"A", "A":"B", "A#":"N", "B":"V"
+        };
+        const arr = [...data];
+        arr.sort((a,b)=>a.ratio - b.ratio);
         noteSummaryDiv.innerHTML = '';
-        for (let i = 0; i < data.length; i++) {
-            const item = data[i];
-            const div = document.createElement('div');
-            div.className = 'noteBox';
-            // 上位3つと下位3つは元のカラー、それ以外は薄いグレー
-            if (i < 3 || i >= data.length - 3) {
-                div.style.backgroundColor = item.color;
-                div.style.fontSize = '0.5em'; // 親要素に対する比率
-                div.style.padding = '3px'; // 通常のパディング
+        for (let i=0;i<arr.length;i++){
+            const item=arr[i];
+            const div=document.createElement('div');
+            div.className='noteBox';
+            if (i<3 || i>=arr.length-3) {
+                div.style.backgroundColor=item.color;
+                div.style.fontSize='0.5em'; 
+                div.style.padding='3px'; 
             } else {
-                // div.style.backgroundColor = '##f7f7f7';
-                div.style.fontSize = '0.5em'; // 親要素に対する比率
-                div.style.padding = '1px'; // 小さめのパディング
+                div.style.fontSize='0.5em'; 
+                div.style.padding='1px'; 
             }
-            const line1 = document.createElement('div');
-            // line1.textContent = item.name;
-            line1.textContent = noteLabelMap[item.name];
-            const line2 = document.createElement('div');
-            line2.textContent = `${item.ratio.toFixed(1)}`;
+            const line1=document.createElement('div');
+            line1.textContent=noteLabelMap[item.name];
+            const line2=document.createElement('div');
+            line2.textContent=`${item.ratio.toFixed(1)}`;
             div.appendChild(line1);
             div.appendChild(line2);
             noteSummaryDiv.appendChild(div);
         }
     }
 
-    function drawCurrentGraph() {
-        if(currentGraphType === "line"){
-            drawLineGraph();
+    function drawGraph(graph) {
+        const {id, date, amplitudes, fftSize, sampleRate, noteSummaryData} = graph;
+
+        const graphDiv = document.createElement('div');
+        graphDiv.className = 'graphCanvasContainer';
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'graphHeader';
+        const infoSpan = document.createElement('span');
+        infoSpan.textContent = `#${id} (${date})`;
+        const delBtn = document.createElement('button');
+        delBtn.className='deleteBtn';
+        delBtn.textContent='削除';
+        delBtn.addEventListener('click',()=>{
+            // 削除
+            const idx = savedGraphs.findIndex(g=>g.id===id);
+            if (idx>=0) {
+                savedGraphs.splice(idx,1);
+                if (selectedGraphId===id) {
+                    selectedGraphId=null;
+                }
+                updateSavedGraphsButtons();
+                redrawAllGraphs();
+            }
+        });
+
+        headerDiv.appendChild(infoSpan);
+        headerDiv.appendChild(delBtn);
+
+        const canvas = document.createElement('canvas');
+        // 幅は既存レイアウトから決定
+        const graphWidth = Math.min(window.innerWidth, 600)*0.9;
+        canvas.width = graphWidth;
+        canvas.height = graphWidth; 
+        const ctx = canvas.getContext('2d');
+
+        graphDiv.appendChild(headerDiv);
+        graphDiv.appendChild(canvas);
+        graphsContainer.appendChild(graphDiv);
+
+        // 全描画は関数化
+        drawCurrentGraphOnCanvas(ctx, amplitudes, fftSize, sampleRate);
+    }
+
+    function drawCurrentGraphOnCanvas(ctx, amplitudes, fftSize, sampleRate) {
+        const rows = 13; 
+        const cols = 5; 
+        const canvasWidth = ctx.canvas.width;
+        const canvasHeight = ctx.canvas.height;
+        const cellWidth = Math.floor(canvasWidth / cols);
+        const cellHeight = Math.floor(canvasHeight / rows);
+
+        const circleNotesOrder = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+        const octaveCircleOrder = ["VC0","VC1","VC2-1","VC2-2"];
+        const baseRadii = { "VC0":canvasWidth*0.416, "VC1":canvasWidth*0.333, "VC2-1":canvasWidth*0.25, "VC2-2":canvasWidth*0.166 };
+
+        if(!amplitudes) return;
+        
+        function freqToIndex(freq) { return Math.round(freq * fftSize / sampleRate); }
+
+        // オクターブ毎の正規化用
+        const octaveNorms = {};
+        for (const octave of octaves) {
+            if(!octaveStates[octave.name]) continue;
+            const startIndex = freqToIndex(octave.rangeStart);
+            const endIndex = Math.min(freqToIndex(octave.rangeEnd), amplitudes.length-1);
+            let minVal = Infinity;
+            let maxVal = -Infinity;
+            for (let i = startIndex; i <= endIndex; i++) {
+                const val = amplitudes[i];
+                if (val < minVal) minVal = val;
+                if (val > maxVal) maxVal = val;
+            }
+            octaveNorms[octave.name] = {minVal, maxVal};
+        }
+
+        function reversedNotes(octave) {
+            return [...octave.notes].reverse();
+        }
+
+        if(currentGraphType==="line"){
+            // 背景グリッド
+            ctx.fillStyle='white';
+            ctx.fillRect(0,0,canvasWidth,canvasHeight);
+            ctx.strokeStyle='#ccc';
+            for (let r=0;r<=rows;r++){
+                ctx.beginPath();
+                ctx.moveTo(0,r*cellHeight);
+                ctx.lineTo(canvasWidth,r*cellHeight);
+                ctx.stroke();
+            }
+            for (let c=0;c<=cols;c++){
+                ctx.beginPath();
+                ctx.moveTo(c*cellWidth,0);
+                ctx.lineTo(c*cellWidth,canvasHeight);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle='black';
+            ctx.font='10px sans-serif';
+            for (let c=0; c<topHeaders.length; c++) {
+                const text = topHeaders[c];
+                const x = (c+1)*cellWidth + 2; 
+                const y = 10; 
+                ctx.fillText(text, x, y);
+            }
+
+            for (let r=0;r<leftHeaders.length;r++){
+                const text=leftHeaders[r];
+                const x=2;
+                const y=(r+1)*cellHeight+10;
+                ctx.fillText(text,x,y);
+            }
+
+            for (let o=0;o<octaves.length;o++){
+                const octave=octaves[o];
+                if(!octaveStates[octave.name]) continue;
+                const oNorm=octaveNorms[octave.name];
+                if(!oNorm) continue;
+                const {minVal,maxVal}=oNorm;
+                const normalize=(val)=>(val-minVal)*100/(maxVal-minVal);
+
+                const revNotes = reversedNotes(octave);
+                for (let n=0;n<revNotes.length;n++){
+                    const note=revNotes[n];
+                    const cellX=(o+1)*cellWidth;
+                    const cellY=(n+1)*cellHeight;
+                    const startIndex=Math.max(0,freqToIndex(note.fStart));
+                    const endIndex=Math.min(amplitudes.length-1,freqToIndex(note.fEnd));
+
+                    const xScale=(cellWidth)/(note.fEnd - note.fStart);
+
+                    ctx.beginPath();
+                    ctx.strokeStyle=note.color;
+                    let firstPoint=true;
+                    for (let idx=startIndex;idx<=endIndex;idx++){
+                        const freq=idx*sampleRate/fftSize;
+                        const val=normalize(amplitudes[idx]);
+                        const clippedVal=Math.max(intensityMin,Math.min(100,val));
+                        const y=cellY + cellHeight - ((clippedVal - intensityMin)*(cellHeight/(100-intensityMin)));
+                        const x=cellX + (freq - note.fStart)*xScale;
+                        if(firstPoint){ctx.moveTo(x,y);firstPoint=false;}
+                        else ctx.lineTo(x,y);
+                    }
+                    ctx.stroke();
+
+                    ctx.fillStyle='black';
+                    ctx.font='10px sans-serif';
+                    ctx.fillText(`${note.name} (${note.fStart.toFixed(1)} - ${note.fEnd.toFixed(1)} Hz)`, cellX+2, cellY+10);
+                }
+            }
         } else {
-            drawCircleGraph();
-        }
-    }
+            // circle
+            ctx.fillStyle='white';
+            ctx.fillRect(0,0,canvasWidth,canvasHeight);
+            const cx=canvasWidth/2;
+            const cy=canvasHeight/2;
+            function degToRad(d){return d*Math.PI/180;}
 
-    function reversedNotes(octave) {
-        return [...octave.notes].reverse();
-    }
-
-    function drawLineGraph() {
-        fftCtx.fillStyle = 'white';
-        fftCtx.fillRect(0, 0, fftCanvas.width, fftCanvas.height);
-
-        fftCtx.strokeStyle = '#ccc';
-        for (let r = 0; r <= rows; r++) {
-            fftCtx.beginPath();
-            fftCtx.moveTo(0, r * cellHeight);
-            fftCtx.lineTo(canvasWidth, r * cellHeight);
-            fftCtx.stroke();
-        }
-        for (let c = 0; c <= cols; c++) {
-            fftCtx.beginPath();
-            fftCtx.moveTo(c * cellWidth, 0);
-            fftCtx.lineTo(c * cellWidth, canvasHeight);
-            fftCtx.stroke();
-        }
-
-        fftCtx.fillStyle = 'black';
-        fftCtx.font = '10px sans-serif';
-
-        for (let c = 0; c < topHeaders.length; c++) {
-            const text = topHeaders[c];
-            const x = (c+1)*cellWidth + 2; 
-            const y = 10; 
-            fftCtx.fillText(text, x, y);
-        }
-
-        for (let r = 0; r < leftHeaders.length; r++) {
-            const text = leftHeaders[r];
-            const x = 2;
-            const y = (r+1)*cellHeight + 10;
-            fftCtx.fillText(text, x, y);
-        }
-
-        if(!amplitudes) return;
-        const freqToIndex = (freq) => Math.round(freq * fftSize / sampleRate);
-
-        for (let o = 0; o < octaves.length; o++) {
-            const octave = octaves[o];
-            if(!octaveStates[octave.name]) continue; 
-
-            const oNorm = octaveNorms[octave.name];
-            const minVal = oNorm.minVal;
-            const maxVal = oNorm.maxVal;
-            const normalize = (val) => (val - minVal) * (100 / (maxVal - minVal));
-
-            const revNotes = reversedNotes(octave);
-            for (let n = 0; n < revNotes.length; n++) {
-                const note = revNotes[n];
-                const cellX = (o+1)*cellWidth;
-                const cellY = (n+1)*cellHeight;
-
-                const startIndex = Math.max(0, freqToIndex(note.fStart));
-                const endIndex = Math.min(amplitudes.length - 1, freqToIndex(note.fEnd));
-
-                const xScale = (cellWidth)/(note.fEnd - note.fStart);
-
-                fftCtx.beginPath();
-                fftCtx.strokeStyle = note.color;
-
-                let firstPoint = true;
-                for (let idx = startIndex; idx <= endIndex; idx++) {
-                    const freq = idx * sampleRate / fftSize;
-                    const val = normalize(amplitudes[idx]);
-                    const clippedVal = Math.max(intensityMin, Math.min(100, val));
-                    const y = cellY + cellHeight - ((clippedVal - intensityMin)*(cellHeight/(100-intensityMin)));
-                    const x = cellX + (freq - note.fStart)*xScale;
-
-                    if(firstPoint) { fftCtx.moveTo(x,y); firstPoint=false; }
-                    else fftCtx.lineTo(x,y);
+            // 放射状ライン
+            ctx.strokeStyle='gray';
+            for (let i=0;i<12;i++){
+                const angleDeg=210-(i*30);
+                const angleRad=degToRad((angleDeg+360)%360);
+                if (i===0||i===4||i===8) {
+                    ctx.setLineDash([]);
+                } else {
+                    ctx.setLineDash([5,5]);
                 }
-                fftCtx.stroke();
-
-                fftCtx.fillStyle = 'black';
-                fftCtx.font = '10px sans-serif';
-                fftCtx.fillText(`${note.name} (${note.fStart.toFixed(1)} - ${note.fEnd.toFixed(1)} Hz)`, cellX+2, cellY+10);
+                ctx.beginPath();
+                ctx.moveTo(cx,cy);
+                ctx.lineTo(
+                    cx+(canvasWidth/2)*Math.cos(angleRad),
+                    cy+(canvasHeight/2)*Math.sin(angleRad)
+                );
+                ctx.stroke();
             }
-        }
-    }
+            ctx.setLineDash([]);
 
-    function drawCircleGraph() {
-        fftCtx.fillStyle = 'white';
-        fftCtx.fillRect(0,0,fftCanvas.width, fftCanvas.height);
-
-        const cx=fftCanvas.width/2;
-        const cy=fftCanvas.height/2;
-        const freqToIndex=(freq)=>Math.round(freq*fftSize/sampleRate);
-        function degToRad(d){return d*Math.PI/180;}
-
-        if(!amplitudes) return;
-
-        // 放射状ライン
-        fftCtx.strokeStyle = 'gray';
-        for (let i = 0; i < 12; i++) {
-            const angleDeg = 210 - (i * 30);
-            const angleRad = degToRad((angleDeg + 360) % 360);
-            if (i === 0 || i === 4 || i === 8) {
-                fftCtx.setLineDash([]);
-            } else {
-                fftCtx.setLineDash([5, 5]);
+            function noteAngle(noteName){
+                const baseName=noteName.replace(/[0-9]/g,'');
+                const idx=circleNotesOrder.indexOf(baseName);
+                let angle=(210 - idx*30)%360;
+                if(angle<0)angle+=360;
+                return angle;
             }
-            
-            fftCtx.beginPath();
-            fftCtx.moveTo(cx, cy);
-            fftCtx.lineTo(
-                cx + (fftCanvas.width / 2) * Math.cos(angleRad),
-                cy + (fftCanvas.height / 2) * Math.sin(angleRad)
-            );
-            fftCtx.stroke();
-        }
-        fftCtx.setLineDash([]);
 
-        function noteAngle(noteName){
-            const baseName=noteName.replace(/[0-9]/g,'');
-            const idx=circleNotesOrder.indexOf(baseName);
-            let angle=(210 - idx*30)%360;
-            if(angle<0)angle+=360;
-            return angle;
-        }
+            for(const oName of octaveCircleOrder){
+                if(!octaveStates[oName]) continue;
+                const octave=octaves.find(o=>o.name===oName);
+                const oNorm=octaveNorms[oName];
+                if(!oNorm) continue;
+                const {minVal,maxVal}=oNorm;
+                const normalize=(val)=>(val-minVal)*(100/(maxVal-minVal));
+                const baseR=baseRadii[oName];
 
-        for(const oName of octaveCircleOrder){
-            if(!octaveStates[oName]) continue; 
-            const octave=octaves.find(o=>o.name===oName);
-            const oNorm=octaveNorms[oName];
-            const minVal=oNorm.minVal;
-            const maxVal=oNorm.maxVal;
-            const normalize=(val)=>(val-minVal)*(100/(maxVal-minVal));
-            const baseR=baseRadii[oName];
+                for(const note of octave.notes){
+                    const startIndex = Math.max(0,freqToIndex(note.fStart));
+                    const endIndex = Math.min(amplitudes.length-1,freqToIndex(note.fEnd));
 
-            for(const note of octave.notes){
-                const startIndex = Math.max(0,freqToIndex(note.fStart));
-                const endIndex = Math.min(amplitudes.length - 1,freqToIndex(note.fEnd));
+                    ctx.beginPath();
+                    ctx.strokeStyle=note.color;
+                    let firstPoint=true;
 
-                fftCtx.beginPath();
-                fftCtx.strokeStyle = note.color;
-                let firstPoint=true;
+                    for(let idx=startIndex;idx<=endIndex;idx++){
+                        const freq=idx*sampleRate/fftSize;
+                        const val=normalize(amplitudes[idx]);
+                        const clippedVal=Math.max(intensityMin,Math.min(100,val));
+                        const intensityRatio=(clippedVal-intensityMin)/(100-intensityMin);
+                        const radius=baseR+intensityRatio*(canvasWidth*0.083);
 
-                for(let idx=startIndex;idx<=endIndex;idx++){
-                    const freq=idx*sampleRate/fftSize;
-                    const val=normalize(amplitudes[idx]);
-                    const clippedVal=Math.max(intensityMin,Math.min(100,val));
-                    const intensityRatio=(clippedVal-intensityMin)/(100-intensityMin);
-                    const radius=baseR+intensityRatio*(fftCanvas.width*0.083);
+                        const freqRatio=(freq - note.fStart)/(note.fEnd-note.fStart);
+                        const startDeg=noteAngle(note.name);
+                        let angleDeg = startDeg - freqRatio*30;
+                        angleDeg=(angleDeg+360)%360;
+                        const angleRad=degToRad(angleDeg);
 
-                    const freqRatio=(freq - note.fStart)/(note.fEnd-note.fStart);
-                    const startDeg=noteAngle(note.name);
-                    let angleDeg = startDeg - freqRatio*30;
-                    angleDeg=(angleDeg+360)%360;
-                    const angleRad=degToRad(angleDeg);
+                        const x=cx+radius*Math.cos(angleRad);
+                        const y=cy+radius*Math.sin(angleRad);
 
-                    const x=cx+radius*Math.cos(angleRad);
-                    const y=cy+radius*Math.sin(angleRad);
-
-                    if(firstPoint){fftCtx.moveTo(x,y);firstPoint=false;}
-                    else fftCtx.lineTo(x,y);
+                        if(firstPoint){ctx.moveTo(x,y);firstPoint=false;}
+                        else ctx.lineTo(x,y);
+                    }
+                    ctx.stroke();
                 }
-                fftCtx.stroke();
             }
-        }
 
-        // 同心円
-        fftCtx.strokeStyle='gray';
-        for(const oName of octaveCircleOrder){
-            fftCtx.beginPath();
-            fftCtx.arc(cx,cy,baseRadii[oName],0,2*Math.PI);
-            fftCtx.stroke();
+            // 同心円
+            ctx.strokeStyle='gray';
+            for(const oName of octaveCircleOrder){
+                ctx.beginPath();
+                ctx.arc(cx,cy,baseRadii[oName],0,2*Math.PI);
+                ctx.stroke();
+            }
         }
     }
 
