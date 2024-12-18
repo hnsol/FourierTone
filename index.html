@@ -5,8 +5,11 @@
 <!-- モバイル端末での表示最適化 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>音声録音とフーリエ変換</title>
+<!-- Font Awesome をCDNで読み込み -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
 body {
+    color: #444444; /* 濃いめのグレー */
     font-family: sans-serif;
     margin: 10px;
     padding: 0;
@@ -68,13 +71,41 @@ canvas {
     display: block;
     margin-top: 10px;
 }
+
+#noteSummary {
+    display: flex;
+    gap: 5px;
+    /* flex-wrap: wrap; を削除 */
+    flex-wrap: nowrap;
+    /* 横スクロールできるように */
+    overflow-x: auto;
+    margin-bottom: 10px;
+}
+.noteBox {
+    width: 60px;
+    height: 40px;
+    color: #444444;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    text-align: center;
+    border-radius: 3px;
+    background-color: #f7f7f7; /* 薄いグレー背景 */
+}
+.noteBox div {
+    line-height: 1.2;
+}
 </style>
 </head>
 <body>
 <div id="container">
     <div id="recordingArea">
         <div id="controls">
-            <button id="startBtn">録音開始</button>
+            <button id="startBtn">
+                <i class="fas fa-play"></i>
+            </button>
             <div id="timer"></div>
         </div>
         <!-- サイズは後でJSでセット -->
@@ -100,6 +131,10 @@ canvas {
                 <button class="minValBtn" data-min="90">90&lt;</button>
             </div>
         </div>
+
+        <!-- 上部に12音階の構成比表示用エリア -->
+        <div id="noteSummary"></div>
+
         <!-- サイズは後でJSでウィンドウ幅に合わせてセット -->
         <canvas id="fftCanvas"></canvas>
     </div>
@@ -198,6 +233,7 @@ canvas {
     let recordingData = [];
     let recording = false;
     let startTime;
+    let recordingTimer; // タイマーIDを保存
     let rafId;
 
     const startBtn = document.getElementById('startBtn');
@@ -206,6 +242,7 @@ canvas {
     const vCtx = visualizer.getContext('2d');
     const fftCanvas = document.getElementById('fftCanvas');
     const fftCtx = fftCanvas.getContext('2d');
+    const noteSummaryDiv = document.getElementById('noteSummary');
 
     const graphTypeBtns = document.querySelectorAll('.graphTypeBtn');
     const minValBtns = document.querySelectorAll('.minValBtn');
@@ -218,18 +255,14 @@ canvas {
     let octaveStates = {
         "VC0": false,
         "VC1": true,
-        "VC2": false,
         "VC2-1": false,
         "VC2-2": false
     };
 
     // 画面幅に応じてキャンバスサイズを決定
     const screenWidth = Math.min(window.innerWidth, 600); // 最大600pxくらいまで
-    // 可視化キャンバスは横幅の80%程度、高さは適度に
     visualizer.width = screenWidth * 0.8;
-    visualizer.height = 80; // 高さ固定でもOK
-
-    // FFT用キャンバスは正方形に近い形で表示
+    visualizer.height = 80; 
     fftCanvas.width = screenWidth * 0.9;
     fftCanvas.height = fftCanvas.width; 
 
@@ -299,15 +332,23 @@ canvas {
     await init();
 
     startBtn.addEventListener('click', () => {
-        if (recording) return;
-        startRecording();
+        if (recording) {
+            stopRecording();
+            startBtn.innerHTML = '<i class="fas fa-play"></i>';
+        } else {
+            startRecording();
+            startBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        }
     });
 
     graphTypeBtns.forEach(btn=>{
         btn.addEventListener('click',()=>{
             currentGraphType = btn.dataset.type;
             updateGraphTypeSelection();
-            if(!recording && amplitudes) drawCurrentGraph();
+            if(!recording && amplitudes) {
+                drawCurrentGraph();
+                showNoteSummary();
+            }
         });
     });
 
@@ -315,7 +356,10 @@ canvas {
         btn.addEventListener('click',()=>{
             intensityMin = parseInt(btn.getAttribute('data-min'),10);
             updateMinValSelection();
-            if(!recording && amplitudes) drawCurrentGraph();
+            if(!recording && amplitudes) {
+                drawCurrentGraph();
+                showNoteSummary();
+            }
         });
     });
 
@@ -333,24 +377,44 @@ canvas {
             }
 
             updateOctaveSelection();
-            if (!recording && amplitudes) drawCurrentGraph();
+            if (!recording && amplitudes) {
+                drawCurrentGraph();
+                showNoteSummary();
+            }
         });
     });
 
     function startRecording() {
+        if (recordingTimer) {
+            clearTimeout(recordingTimer);
+            recordingTimer = null;
+        }
+
         recordingData = [];
         recording = true;
         startTime = Date.now();
-        setTimeout(stopRecording, RECORD_SECONDS * 1000);
+        timerEl.textContent = `残り時間: ${RECORD_SECONDS.toFixed(1)}秒`;
+
+        recordingTimer = setTimeout(() => {
+            if (recording) {
+                stopRecording();
+                processFFT(); 
+            }
+        }, RECORD_SECONDS * 1000);
+
         updateTimer();
         drawWaveform();
     }
 
     function stopRecording() {
         recording = false;
+        if (recordingTimer) {
+            clearTimeout(recordingTimer);
+            recordingTimer = null;
+        }
         cancelAnimationFrame(rafId);
         timerEl.textContent = "";
-        processFFT();
+        startBtn.innerHTML = '<i class="fas fa-play"></i>';
     }
 
     function updateTimer() {
@@ -445,7 +509,6 @@ canvas {
 
     function processFFT() {
         sampleRate = audioContext.sampleRate;
-
         let length = recordingData.length;
         fftSize = 1;
         while (fftSize * 2 <= length) {
@@ -491,7 +554,98 @@ canvas {
             octaveNorms[octave.name] = {minVal, maxVal};
         }
 
+        // ここから12音階ごとの平均値と構成比を計算
+        const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+        const noteData = {};
+        for (const nName of noteNames) {
+            noteData[nName] = [];
+        }
+
+        // 各ノートの周波数範囲から平均値を計算する
+        // 指定された4つのオクターブ領域（VC0、VC1、VC2-1、VC2-2）で同じ音名に対応する範囲をすべて集める
+        // 例：CならVC0のC8, VC1のC7, VC2-1のC3, VC2-2のC2を対象とする
+        for (const octave of octaves) {
+            for (const note of octave.notes) {
+                // ノート名から音階記号部分のみ取得 (C8 -> C)
+                const baseNoteName = note.name.replace(/[0-9]/g,'');
+                const startIdx = freqToIndex(note.fStart);
+                const endIdx = Math.min(freqToIndex(note.fEnd), amplitudes.length - 1);
+                let sumVal = 0;
+                let count = 0;
+                for (let i = startIdx; i <= endIdx; i++) {
+                    sumVal += amplitudes[i];
+                    count++;
+                }
+                if (count > 0) {
+                    const avg = sumVal / count;
+                    noteData[baseNoteName].push(avg);
+                }
+            }
+        }
+
+        // 4オクターブ分の平均値を再度平均
+        const noteAvgIntensity = [];
+        // 同時に色を取得（VC0にある同音階の色を使用）
+        const noteColorMap = {};
+        for (const nName of noteNames) {
+            const values = noteData[nName];
+            // valuesには4つ程度の平均値が入っているはず
+            const avgAll = values.reduce((a,b)=>a+b,0)/values.length;
+            noteAvgIntensity.push({name:nName, avg:avgAll});
+            
+            // 色はVC0からの対応するノートを探して取る
+            // VC0のnotesを参照し、同じbaseNoteNameのcolorを取得
+            const vc0Note = octaves[0].notes.find(nt => nt.name.replace(/[0-9]/g,'')===nName);
+            if (vc0Note) {
+                noteColorMap[nName] = vc0Note.color;
+            } else {
+                noteColorMap[nName] = "#000000"; // fallback
+            }
+        }
+
+        // 構成比計算
+        const sumAll = noteAvgIntensity.reduce((acc,cur)=>acc+cur.avg,0);
+        for (const ni of noteAvgIntensity) {
+            ni.ratio = sumAll > 0 ? (ni.avg / sumAll)*100 : 0;
+            ni.color = noteColorMap[ni.name];
+        }
+
+        // 大きい順に並べる
+        noteAvgIntensity.sort((a,b)=>b.ratio - a.ratio);
+
+        // 計算結果をグローバルに保持
+        window.noteSummaryData = noteAvgIntensity;
+
         drawCurrentGraph();
+        showNoteSummary();
+    }
+
+    function showNoteSummary() {
+        if (!window.noteSummaryData) return;
+        const data = window.noteSummaryData;
+        const noteLabelMap = {
+            "C":"R", "C#":"C", "D":"O", "D#":"G", "E":"Y", "F":"L",
+            "F#":"E", "G":"S", "G#":"A", "A":"B", "A#":"N", "B":"V" };
+        noteSummaryDiv.innerHTML = '';
+        for (let i = 0; i < data.length; i++) {
+            const item = data[i];
+            const div = document.createElement('div');
+            div.className = 'noteBox';
+            // 上位3つと下位3つは元のカラー、それ以外は薄いグレー
+            if (i < 3 || i >= data.length - 3) {
+                div.style.backgroundColor = item.color;
+            } else {
+                // div.style.backgroundColor = '##f7f7f7';
+            }
+            const line1 = document.createElement('div');
+            // line1.textContent = item.name;
+            line1.textContent = noteLabelMap[item.name];
+            const line2 = document.createElement('div');
+            line2.textContent = `${item.ratio.toFixed(1)}%`;
+            div.appendChild(line1);
+            div.appendChild(line2);
+            noteSummaryDiv.appendChild(div);
+        }
     }
 
     function drawCurrentGraph() {
@@ -541,6 +695,7 @@ canvas {
             fftCtx.fillText(text, x, y);
         }
 
+        if(!amplitudes) return;
         const freqToIndex = (freq) => Math.round(freq * fftSize / sampleRate);
 
         for (let o = 0; o < octaves.length; o++) {
@@ -595,18 +750,17 @@ canvas {
         const freqToIndex=(freq)=>Math.round(freq*fftSize/sampleRate);
         function degToRad(d){return d*Math.PI/180;}
 
+        if(!amplitudes) return;
+
         // 放射状ライン
         fftCtx.strokeStyle = 'gray';
-
         for (let i = 0; i < 12; i++) {
             const angleDeg = 210 - (i * 30);
             const angleRad = degToRad((angleDeg + 360) % 360);
-            
-            // 実線と破線の切り替え: 30°, 150°, 270°は実線、それ以外は破線
             if (i === 0 || i === 4 || i === 8) {
-                fftCtx.setLineDash([]); // 実線
+                fftCtx.setLineDash([]);
             } else {
-                fftCtx.setLineDash([5, 5]); // 破線: ダッシュ長さ5px, 間隔5px
+                fftCtx.setLineDash([5, 5]);
             }
             
             fftCtx.beginPath();
@@ -617,8 +771,6 @@ canvas {
             );
             fftCtx.stroke();
         }
-        
-        // 最後にlineDashをリセットしておく
         fftCtx.setLineDash([]);
 
         function noteAngle(noteName){
@@ -640,7 +792,7 @@ canvas {
 
             for(const note of octave.notes){
                 const startIndex = Math.max(0,freqToIndex(note.fStart));
-                const endIndex = Math.min(amplitudes.length-1,freqToIndex(note.fEnd));
+                const endIndex = Math.min(amplitudes.length - 1,freqToIndex(note.fEnd));
 
                 fftCtx.beginPath();
                 fftCtx.strokeStyle = note.color;
@@ -651,7 +803,7 @@ canvas {
                     const val=normalize(amplitudes[idx]);
                     const clippedVal=Math.max(intensityMin,Math.min(100,val));
                     const intensityRatio=(clippedVal-intensityMin)/(100-intensityMin);
-                    const radius=baseR+intensityRatio*(fftCanvas.width*0.083); // 約1/12半径増加
+                    const radius=baseR+intensityRatio*(fftCanvas.width*0.083);
 
                     const freqRatio=(freq - note.fStart)/(note.fEnd-note.fStart);
                     const startDeg=noteAngle(note.name);
