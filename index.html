@@ -98,7 +98,7 @@ canvas {
     line-height: 1.2;
 }
 .noteBox div:last-child {
-    font-size: 0.5em; /* 下の行のみフォントサイズを縮小 */
+    font-size: 0.3em; /* 下の行のみフォントサイズを縮小 */
 }
 </style>
 </head>
@@ -641,11 +641,11 @@ canvas {
             // 上位3つと下位3つは元のカラー、それ以外は薄いグレー
             if (i < 3 || i >= data.length - 3) {
                 div.style.backgroundColor = item.color;
-                div.style.fontSize = '0.75em'; // 親要素の80%のサイズ
+                div.style.fontSize = '0.5em'; // 親要素に対する比率
                 div.style.padding = '3px'; // 通常のパディング
             } else {
                 // div.style.backgroundColor = '##f7f7f7';
-                div.style.fontSize = '0.5em'; // 親要素の50%のサイズ
+                div.style.fontSize = '0.5em'; // 親要素に対する比率
                 div.style.padding = '1px'; // 小さめのパディング
             }
             const line1 = document.createElement('div');
