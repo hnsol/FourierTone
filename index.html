@@ -221,6 +221,9 @@ canvas {
                 <button id="singleViewBtn"><i class="fas fa-square"></i></button>
             </div>
             <div id="savedGraphsBtns"></div>
+            <div id="warningMessage" style="color: red; font-size: 12px; display: none; margin-top: 5px;">
+                次の録音後、一番古いグラフを削除します。
+            </div>
         </div>
 
         <div id="graphsContainer"></div>
@@ -516,7 +519,7 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         recordingData = [];
         recording = true;
         startTime = Date.now();
-        timerEl.textContent = `残り時間: ${RECORD_SECONDS.toFixed(1)}秒`;
+        timerEl.textContent = `残: ${RECORD_SECONDS.toFixed(1)}s`;
 
         recordingTimer = setTimeout(() => {
             if (recording) {
@@ -555,7 +558,7 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         if (!recording) return;
         const elapsed = (Date.now() - startTime) / 1000;
         const remain = Math.max(0, RECORD_SECONDS - elapsed);
-        timerEl.textContent = `残り時間: ${remain.toFixed(1)}秒`;
+        timerEl.textContent = `残: ${remain.toFixed(1)}s`;
         if (remain > 0) {
             requestAnimationFrame(updateTimer);
         }
@@ -646,7 +649,7 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         while (fftSize * 2 <= length) {
             fftSize *= 2;
         }
-
+    
         if (fftSize < length) {
             recordingData = recordingData.slice(0, fftSize);
         } else if (fftSize > length) {
@@ -654,21 +657,21 @@ document.getElementById('recordingArea').prepend(controlsDiv);
             pad.set(recordingData);
             recordingData = pad;
         }
-
+    
         const real = new Float32Array(recordingData);
         const imag = new Float32Array(fftSize);
-
+    
         fft(real, imag);
-
+    
         const amplitudes = new Float32Array(fftSize / 2);
         for (let i = 0; i < fftSize / 2; i++) {
             const mag = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
             const dB = 20 * Math.log10(mag + 1e-10);
             amplitudes[i] = dB;
         }
-
+    
         const noteSummaryData = calcNoteSummary(amplitudes, fftSize, sampleRate);
-
+    
         const now = new Date();
         const dateStr = now.getFullYear() + "-" +
                         String(now.getMonth() + 1).padStart(2, '0') + "-" +
@@ -676,10 +679,10 @@ document.getElementById('recordingArea').prepend(controlsDiv);
                         String(now.getHours()).padStart(2, '0') + ":" +
                         String(now.getMinutes()).padStart(2, '0') + ":" +
                         String(now.getSeconds()).padStart(2, '0');
-
+    
         const graphId = String(graphCounter).padStart(2, '0');
         graphCounter++;
-
+    
         const graphData = {
             id: graphId,
             date: dateStr,
@@ -688,16 +691,18 @@ document.getElementById('recordingArea').prepend(controlsDiv);
             sampleRate: sampleRate,
             noteSummaryData: noteSummaryData
         };
-
+    
+        // 最大枚数を超えた場合、一番古いグラフを削除
         if (savedGraphs.length >= MAX_GRAPHS) {
-            savedGraphs.shift();
+            savedGraphs.shift(); // 先頭のグラフを削除
         }
+    
         savedGraphs.push(graphData);
-
+    
         // 自動で新しいグラフを選択
         selectedGraphId = graphId;
         singleViewMode = true;
-
+    
         updateSavedGraphsButtons();
         redrawAllGraphs();
         updateViewModeButtons(); // ここでビュー切り替えボタンを再更新する
@@ -799,6 +804,14 @@ document.getElementById('recordingArea').prepend(controlsDiv);
     
             savedGraphsBtns.appendChild(btn);
         }
+    
+        // 最大枚数チェックして警告を表示
+        const warningMessage = document.getElementById('warningMessage');
+        if (savedGraphs.length >= MAX_GRAPHS) {
+            warningMessage.style.display = 'block';
+        } else {
+            warningMessage.style.display = 'none';
+        }
     }
 
     function redrawAllGraphs() {
@@ -876,15 +889,14 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         delBtn.className = 'deleteBtn';
         delBtn.innerHTML = '<i class="fas fa-trash"></i>';
         delBtn.addEventListener('click', () => {
-            // 削除
             const idx = savedGraphs.findIndex(g => g.id === id);
             if (idx >= 0) {
-                savedGraphs.splice(idx, 1);
+                savedGraphs.splice(idx, 1); // グラフを削除
                 if (selectedGraphId === id) {
-                    selectedGraphId = null;
+                    selectedGraphId = null; // 選択解除
                 }
-                updateSavedGraphsButtons();
-                redrawAllGraphs();
+                updateSavedGraphsButtons(); // ボタン更新
+                redrawAllGraphs(); // グラフ再描画
             }
         });
 
