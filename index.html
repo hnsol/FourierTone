@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- モバイル端末での表示最適化 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>さほう、Sahou</title>
+<title>Sahou: さほう、</title>
 <!-- Font Awesome をCDNで読み込み -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
@@ -136,12 +136,18 @@ canvas {
     margin-right: 10px;
 }
 .deleteBtn {
-    background: #f88;
+    background: none;
     border: none;
-    padding: 2px 5px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 16px; /* アイコンの大きさ */
+    color: #f88; /* ゴミ箱アイコンの色 */
+    padding: 5px;
 }
+
+.deleteBtn:hover {
+    color: #d44; /* ホバー時の色 */
+}
+
 
 /* デフォルトレイアウト(単一表示用) */
 #graphsContainer {
@@ -844,15 +850,15 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         const infoSpan = document.createElement('span');
         infoSpan.textContent = `#${id} (${date})`;
         const delBtn = document.createElement('button');
-        delBtn.className='deleteBtn';
-        delBtn.textContent='削除';
-        delBtn.addEventListener('click',()=>{
+        delBtn.className = 'deleteBtn';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.addEventListener('click', () => {
             // 削除
-            const idx = savedGraphs.findIndex(g=>g.id===id);
-            if (idx>=0) {
-                savedGraphs.splice(idx,1);
-                if (selectedGraphId===id) {
-                    selectedGraphId=null;
+            const idx = savedGraphs.findIndex(g => g.id === id);
+            if (idx >= 0) {
+                savedGraphs.splice(idx, 1);
+                if (selectedGraphId === id) {
+                    selectedGraphId = null;
                 }
                 updateSavedGraphsButtons();
                 redrawAllGraphs();
