@@ -414,14 +414,18 @@ document.getElementById('recordingArea').prepend(controlsDiv);
 
     function updateViewModeButtons() {
         if (singleViewMode) {
-            singleViewBtn.style.backgroundColor = '#4FC3F7';
-            allViewBtn.style.backgroundColor = '';
+            singleViewBtn.style.backgroundColor = '#4FC3F7'; // 1枚表示ボタン強調
+            allViewBtn.style.backgroundColor = ''; // 全体表示ボタンリセット
         } else {
-            singleViewBtn.style.backgroundColor = '';
-            allViewBtn.style.backgroundColor = '#4FC3F7';
+            singleViewBtn.style.backgroundColor = ''; // 1枚表示ボタンリセット
+            allViewBtn.style.backgroundColor = '#4FC3F7'; // 全体表示ボタン強調
         }
-        redrawAllGraphs();
+
+        // 数字ボタンの状態を更新
+        updateSavedGraphsButtons();
+        redrawAllGraphs(); // グラフの表示を再描画
     }
+
 
     updateGraphTypeSelection();
     updateMinValSelection();
@@ -533,6 +537,17 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         }
         cancelAnimationFrame(rafId);
         timerEl.textContent = "";
+
+        // 録音終了後の処理
+        singleViewMode = true; // 1枚表示モードに設定
+        const lastGraph = savedGraphs[savedGraphs.length - 1];
+        if (lastGraph) {
+            selectedGraphId = lastGraph.id; // 最後に追加されたグラフを選択
+        }
+        updateViewModeButtons(); // ビュー切り替えボタン更新
+        updateSavedGraphsButtons(); // 数字ボタン更新
+        redrawAllGraphs(); // グラフ再描画
+
         startBtn.innerHTML = '<i class="fas fa-play"></i>';
     }
 
@@ -758,22 +773,30 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         return noteAvgIntensity;
     }
 
-    function updateSavedGraphsButtons(){
-        savedGraphsBtns.innerHTML = '';
+    function updateSavedGraphsButtons() {
+        savedGraphsBtns.innerHTML = ''; // ボタンを再生成
+    
         for (const g of savedGraphs) {
             const btn = document.createElement('button');
             btn.className = 'graphBtn';
             btn.textContent = g.id;
-            if (selectedGraphId === g.id) {
-                btn.classList.add('selected');
+    
+            // 現在のモードに応じてボタン状態を設定
+            if (singleViewMode && selectedGraphId === g.id) {
+                btn.classList.add('selected'); // ON状態
+            } else {
+                btn.classList.remove('selected'); // OFF状態
             }
+    
             btn.title = g.date;
             btn.addEventListener('click', () => {
-                selectedGraphId = g.id;
-                singleViewMode = true;
-                updateViewModeButtons();
-                updateSavedGraphsButtons();
+                selectedGraphId = g.id; // 該当のグラフを選択
+                singleViewMode = true; // 1枚表示モードに切り替え
+                updateViewModeButtons(); // ビューボタン更新
+                updateSavedGraphsButtons(); // 数字ボタン更新
+                redrawAllGraphs(); // グラフ更新
             });
+    
             savedGraphsBtns.appendChild(btn);
         }
     }
