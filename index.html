@@ -221,9 +221,6 @@ canvas {
                 <button id="singleViewBtn"><i class="fas fa-square"></i></button>
             </div>
             <div id="savedGraphsBtns"></div>
-            <div id="warningMessage" style="color: red; font-size: 12px; display: none; margin-top: 5px;">
-                次の録音後、一番古いグラフを削除します。
-            </div>
         </div>
 
         <div id="graphsContainer"></div>
@@ -290,6 +287,15 @@ document.getElementById('recordingArea').prepend(controlsDiv);
     const allViewBtn = document.getElementById('allViewBtn');
     const savedGraphsBtns = document.getElementById('savedGraphsBtns');
     const graphsContainer = document.getElementById('graphsContainer');
+
+    const warningMessage = document.createElement('div');
+    warningMessage.id = 'warningMessage';
+    warningMessage.style.color = 'red';
+    warningMessage.style.fontSize = '12px';
+    warningMessage.style.display = 'none';
+    warningMessage.style.marginTop = '5px';
+    warningMessage.textContent = '次の録音完了後、一番古いグラフを削除します。';
+    startBtnContainer.appendChild(warningMessage);
 
     let audioStream;
     let audioContext;
@@ -804,9 +810,8 @@ document.getElementById('recordingArea').prepend(controlsDiv);
     
             savedGraphsBtns.appendChild(btn);
         }
-    
+
         // 最大枚数チェックして警告を表示
-        const warningMessage = document.getElementById('warningMessage');
         if (savedGraphs.length >= MAX_GRAPHS) {
             warningMessage.style.display = 'block';
         } else {
