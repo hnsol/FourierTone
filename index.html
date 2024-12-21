@@ -213,7 +213,6 @@ canvas {
                 <button class="minValBtn" data-min="90">90&lt;</button>
             </div>
         </div>
-        <div id="noteSummary"></div>
 
         <div id="graphManagement">
             <div id="viewModeBtns">
@@ -821,47 +820,53 @@ document.getElementById('recordingArea').prepend(controlsDiv);
 
     function redrawAllGraphs() {
         graphsContainer.innerHTML = '';
-        noteSummaryDiv.innerHTML = '';
 
         if (savedGraphs.length === 0) return;
 
         // 親要素である#graphAreaを取得
         const graphArea = document.getElementById('graphArea');
 
-        // singleViewModeに応じて#graphAreaにクラスを付与・削除
         if (singleViewMode) {
             graphArea.classList.add('singleView');
             graphArea.classList.remove('multipleView');
-            const graph = savedGraphs.find(g=>g.id===selectedGraphId) || savedGraphs[savedGraphs.length-1];
+
+            const graph = savedGraphs.find(g=>g.id===selectedGraphId) 
+                         || savedGraphs[savedGraphs.length - 1];
             selectedGraphId = graph.id;
-            updateSavedGraphsButtons();
-            drawGraph(graph);
-            showNoteSummary(graph.noteSummaryData);
+
+            // 単一ビューのときは "single" モードで呼ぶ
+            drawGraph(graph, "single");
+
         } else {
             graphArea.classList.remove('singleView');
             graphArea.classList.add('multipleView');
-            // 全表示
+
+            // 複数ビューのときは "multiple" モードで全グラフを呼ぶ
             for (const g of savedGraphs) {
-                drawGraph(g);
+                drawGraph(g, "multiple");
             }
-            // multipleView時はnoteSummaryを空など、任意で対応
         }
     }
 
-    function showNoteSummary(data) {
+    function showNoteSummary(parent, data) {
         if (!data) return;
+        // 念のため、最初に空にしておく
+        parent.innerHTML = '';
 
         const noteLabelMap = {
             "C":"R", "C#":"C", "D":"O", "D#":"G", "E":"Y", "F":"L",
             "F#":"E", "G":"A", "G#":"B", "A":"N", "A#":"V", "B":"M"
         };
+
+        // 構成比の小さい順にソート
         const arr = [...data];
         arr.sort((a,b)=>a.ratio - b.ratio);
-        noteSummaryDiv.innerHTML = '';
+
         for (let i=0;i<arr.length;i++){
             const item=arr[i];
             const div=document.createElement('div');
             div.className='noteBox';
+            // 最大上位3つ or 最小下位3つ は目立たせたい例(元のロジック準拠)
             if (i<3 || i>=arr.length-3) {
                 div.style.backgroundColor=item.color;
                 div.style.fontSize='0.5em'; 
@@ -871,25 +876,29 @@ document.getElementById('recordingArea').prepend(controlsDiv);
                 div.style.padding='1px'; 
             }
             const line1=document.createElement('div');
-            line1.textContent=noteLabelMap[item.name];
+            line1.textContent=noteLabelMap[item.name] || item.name;
             const line2=document.createElement('div');
             line2.textContent=`${item.ratio.toFixed(1)}`;
             div.appendChild(line1);
             div.appendChild(line2);
-            noteSummaryDiv.appendChild(div);
+            parent.appendChild(div);
         }
     }
-
-    function drawGraph(graph) {
+    
+    function drawGraph(graph, viewMode = "single") {
         const {id, date, amplitudes, fftSize, sampleRate, noteSummaryData} = graph;
 
+        // 親のDOM生成
         const graphDiv = document.createElement('div');
         graphDiv.className = 'graphCanvasContainer';
 
+        // ヘッダ(タイトル + 削除ボタン)を生成
         const headerDiv = document.createElement('div');
         headerDiv.className = 'graphHeader';
         const infoSpan = document.createElement('span');
         infoSpan.textContent = `#${id} (${date})`;
+        headerDiv.appendChild(infoSpan);
+        
         const delBtn = document.createElement('button');
         delBtn.className = 'deleteBtn';
         delBtn.innerHTML = '<i class="fas fa-trash"></i>';
@@ -904,23 +913,36 @@ document.getElementById('recordingArea').prepend(controlsDiv);
                 redrawAllGraphs(); // グラフ再描画
             }
         });
-
-        headerDiv.appendChild(infoSpan);
         headerDiv.appendChild(delBtn);
+        graphDiv.appendChild(headerDiv);
 
+        // ここでモード別にノートサマリーを表示するか判定
+        // （今後「複数ビューでも描く」なら両方とも true にする）
+        if (viewMode === "single" || viewMode === "multiple") {
+            const summaryContainer = document.createElement('div');
+            // 必要ならCSSクラスを付与
+            // summaryContainer.className = 'noteSummaryContainer';
+            
+            // ノートサマリー描画
+            showNoteSummary(summaryContainer, noteSummaryData);
+
+            // graphDiv に追加
+            graphDiv.appendChild(summaryContainer);
+        }
+
+        // キャンバス生成
         const canvas = document.createElement('canvas');
-        // 幅は既存レイアウトから決定
         const graphWidth = Math.min(window.innerWidth, 600)*0.9;
         canvas.width = graphWidth;
         canvas.height = graphWidth; 
-        const ctx = canvas.getContext('2d');
-
-        graphDiv.appendChild(headerDiv);
         graphDiv.appendChild(canvas);
-        graphsContainer.appendChild(graphDiv);
 
-        // 全描画は関数化
+        // グラフ描画
+        const ctx = canvas.getContext('2d');
         drawCurrentGraphOnCanvas(ctx, amplitudes, fftSize, sampleRate);
+        
+        // 最終的に #graphsContainer に追加
+        graphsContainer.appendChild(graphDiv);
     }
 
     function drawCurrentGraphOnCanvas(ctx, amplitudes, fftSize, sampleRate) {
