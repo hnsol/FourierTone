@@ -848,7 +848,7 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         }
     }
 
-    function showNoteSummary(parent, data) {
+    function showNoteSummary(parent, data, showRatio = true) {
         if (!data) return;
         // 念のため、最初に空にしておく
         parent.innerHTML = '';
@@ -877,8 +877,15 @@ document.getElementById('recordingArea').prepend(controlsDiv);
             }
             const line1=document.createElement('div');
             line1.textContent=noteLabelMap[item.name] || item.name;
+            
+            // ★ showRatio が true のときだけ構成比を表示する
             const line2=document.createElement('div');
-            line2.textContent=`${item.ratio.toFixed(1)}`;
+            if (showRatio) {
+                line2.textContent=`${item.ratio.toFixed(1)}`;
+            } else {
+                line2.textContent=''; // あるいは line2 を作らない手もある
+            }
+            
             div.appendChild(line1);
             div.appendChild(line2);
             parent.appendChild(div);
@@ -918,15 +925,20 @@ document.getElementById('recordingArea').prepend(controlsDiv);
 
         // ここでモード別にノートサマリーを表示するか判定
         // （今後「複数ビューでも描く」なら両方とも true にする）
-        if (viewMode === "single" || viewMode === "multiple") {
+        if (viewMode === "single") {
             const summaryContainer = document.createElement('div');
             // 必要ならCSSクラスを付与
             // summaryContainer.className = 'noteSummaryContainer';
             
             // ノートサマリー描画
-            showNoteSummary(summaryContainer, noteSummaryData);
+            showNoteSummary(summaryContainer, noteSummaryData, true);
 
             // graphDiv に追加
+            graphDiv.appendChild(summaryContainer);
+        } else if (viewMode === "multiple") {
+            // 複数ビュー: 構成比非表示( showRatio=false )
+            const summaryContainer = document.createElement('div');
+            showNoteSummary(summaryContainer, noteSummaryData, false);
             graphDiv.appendChild(summaryContainer);
         }
 
