@@ -833,30 +833,19 @@ document.getElementById('recordingArea').prepend(controlsDiv);
 
             const graph = savedGraphs.find(g=>g.id===selectedGraphId) 
                          || savedGraphs[savedGraphs.length - 1];
-            selectedGraphId = graph.id;
 
-            // 単一ビューのときは "single" モードで呼ぶ
-            drawGraph(graph, "single");
+            selectedGraphId = graph ? graph.id : null;
+        
+            // Single view の描画
+            if (graph) {
+                drawGraph(graph, "single");
+            }
 
         } else {
             graphArea.classList.remove('singleView');
             graphArea.classList.add('multipleView');
 
-            // 複数ビューのときは "multiple" モードで全グラフを呼ぶ
-            // for (const g of savedGraphs) {
-            //     drawGraph(g, "multiple");
-
-            for (const g of savedGraphs) {
-                // const graphDiv = document.createElement('div');
-                // graphDiv.className = 'graphCanvasContainer';
-                // graphDiv.setAttribute('data-graph-id', g.id); // IDを設定
-    
-                // drawGraph(g, "multiple");
-                // addGraphClickListener(graphDiv, g.id); // グラフのクリックリスナーを追加
-                // graphsContainer.appendChild(graphDiv);
-
-                drawGraph(g, "multiple");
-            }
+            savedGraphs.forEach(g => drawGraph(g, "multiple"));
         }
     }
 
@@ -906,12 +895,6 @@ document.getElementById('recordingArea').prepend(controlsDiv);
     
     function addGraphClickListener(graphDiv, graphId) {
         graphDiv.addEventListener('click', () => {
-            // console.log(`Graph ${graphId} clicked`); // デバッグ用ログ
-            // console.log(`Clicked element:`, event.target); // クリック対象の要素を確認
-            // console.log(`Assigned Graph ID: ${graphId}`);
-            // console.log(`Expected Graph ID: ${selectedGraphId}`);
-            // selectedGraphId = graphId; // クリックされたグラフのIDを設定
-            
             const clickedId = graphDiv.getAttribute('data-graph-id');
             console.log(`Clicked Graph ID: ${clickedId}`);
             if (clickedId !== graphId) {
@@ -944,17 +927,26 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         const delBtn = document.createElement('button');
         delBtn.className = 'deleteBtn';
         delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+
         delBtn.addEventListener('click', () => {
-            const idx = savedGraphs.findIndex(g => g.id === id);
-            if (idx >= 0) {
-                savedGraphs.splice(idx, 1); // グラフを削除
-                if (selectedGraphId === id) {
-                    selectedGraphId = null; // 選択解除
+            event.stopPropagation(); // イベントのバブリングを防ぐ
+
+            if (confirm(`グラフ #${id} を削除しますか？`)) {
+                const idx = savedGraphs.findIndex(g => g.id === id);
+                if (idx >= 0) {
+                    savedGraphs.splice(idx, 1);
+                    if (selectedGraphId === id) {
+                        selectedGraphId = null;
+                    }
+                    updateSavedGraphsButtons();
+                    redrawAllGraphs();
                 }
-                updateSavedGraphsButtons(); // ボタン更新
-                redrawAllGraphs(); // グラフ再描画
+            } else {
+                // キャンセル時の処理（何もしない）
+                console.log(`削除操作がキャンセルされました。`);
             }
         });
+
         headerDiv.appendChild(delBtn);
         graphDiv.appendChild(headerDiv);
 
