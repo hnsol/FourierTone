@@ -124,6 +124,7 @@ canvas {
 }
 .graphCanvasContainer {
     position: relative;
+    cursor: pointer; /* クリック可能であることを示す */
 }
 .graphHeader {
     font-size: 12px;
@@ -842,7 +843,18 @@ document.getElementById('recordingArea').prepend(controlsDiv);
             graphArea.classList.add('multipleView');
 
             // 複数ビューのときは "multiple" モードで全グラフを呼ぶ
+            // for (const g of savedGraphs) {
+            //     drawGraph(g, "multiple");
+
             for (const g of savedGraphs) {
+                // const graphDiv = document.createElement('div');
+                // graphDiv.className = 'graphCanvasContainer';
+                // graphDiv.setAttribute('data-graph-id', g.id); // IDを設定
+    
+                // drawGraph(g, "multiple");
+                // addGraphClickListener(graphDiv, g.id); // グラフのクリックリスナーを追加
+                // graphsContainer.appendChild(graphDiv);
+
                 drawGraph(g, "multiple");
             }
         }
@@ -892,12 +904,35 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         }
     }
     
+    function addGraphClickListener(graphDiv, graphId) {
+        graphDiv.addEventListener('click', () => {
+            // console.log(`Graph ${graphId} clicked`); // デバッグ用ログ
+            // console.log(`Clicked element:`, event.target); // クリック対象の要素を確認
+            // console.log(`Assigned Graph ID: ${graphId}`);
+            // console.log(`Expected Graph ID: ${selectedGraphId}`);
+            // selectedGraphId = graphId; // クリックされたグラフのIDを設定
+            
+            const clickedId = graphDiv.getAttribute('data-graph-id');
+            console.log(`Clicked Graph ID: ${clickedId}`);
+            if (clickedId !== graphId) {
+                console.error(`ID mismatch! Expected: ${graphId}, Got: ${clickedId}`);
+            }
+            selectedGraphId = clickedId;
+            
+            singleViewMode = true; // シングルビューに切り替え
+            updateViewModeButtons(); // ビュー切り替えボタンを更新
+            redrawAllGraphs(); // グラフを再描画
+        });
+    }
+    
     function drawGraph(graph, viewMode = "single") {
         const {id, date, amplitudes, fftSize, sampleRate, noteSummaryData} = graph;
 
         // 親のDOM生成
         const graphDiv = document.createElement('div');
         graphDiv.className = 'graphCanvasContainer';
+        graphDiv.setAttribute('data-graph-id', id); // グラフIDを属性として追加
+        console.log(`Drawing Graph ID: ${id}`);
 
         // ヘッダ(タイトル + 削除ボタン)を生成
         const headerDiv = document.createElement('div');
@@ -953,6 +988,9 @@ document.getElementById('recordingArea').prepend(controlsDiv);
         const ctx = canvas.getContext('2d');
         drawCurrentGraphOnCanvas(ctx, amplitudes, fftSize, sampleRate);
         
+        // クリックリスナーを追加
+        addGraphClickListener(graphDiv, id);
+
         // 最終的に #graphsContainer に追加
         graphsContainer.appendChild(graphDiv);
     }
